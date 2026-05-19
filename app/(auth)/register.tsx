@@ -5,7 +5,13 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  Easing,
+} from 'react-native-reanimated';
 import { Link, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/auth.store';
@@ -23,11 +29,11 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
-      setError('Please fill in all fields');
+      setError('Rellena todos los campos');
       return;
     }
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError('La contraseña debe tener al menos 6 caracteres');
       return;
     }
     setLoading(true);
@@ -36,7 +42,7 @@ export default function RegisterScreen() {
       await register(email.trim(), password, name.trim());
       router.replace('/(tabs)');
     } catch (e: any) {
-      setError(e.message ?? 'Registration failed. Please try again.');
+      setError(e.message ?? 'Error al crear la cuenta. Inténtalo de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -48,52 +54,73 @@ export default function RegisterScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <View style={styles.header}>
-          <Text style={styles.logo}>LifeVault</Text>
-          <Text style={styles.subtitle}>Create your account</Text>
-        </View>
+        {/* Logo + header */}
+        <Animated.View
+          entering={FadeInDown.duration(600).delay(0).easing(Easing.out(Easing.quad))}
+          style={styles.header}
+        >
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.wordmark}
+            resizeMode="contain"
+            accessibilityLabel="LifeVault"
+          />
+          <Text style={styles.subtitle}>Crea tu cuenta</Text>
+        </Animated.View>
 
-        <View style={styles.form}>
+        {/* Form */}
+        <Animated.View
+          entering={FadeInUp.duration(600).delay(150).easing(Easing.out(Easing.quad))}
+          style={styles.form}
+        >
           <Input
-            label="Name"
+            label="Nombre"
             value={name}
             onChangeText={setName}
             placeholder="Pablo"
             autoCapitalize="words"
             autoComplete="name"
+            textContentType="name"
           />
           <Input
             label="Email"
             value={email}
             onChangeText={setEmail}
-            placeholder="you@example.com"
+            placeholder="tu@email.com"
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
+            textContentType="emailAddress"
           />
           <Input
-            label="Password"
+            label="Contraseña"
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••"
             secureTextEntry
             autoComplete="new-password"
+            textContentType="newPassword"
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <Button
-            label="Create account"
+            label="Crear cuenta"
             onPress={handleRegister}
             loading={loading}
+            size="lg"
             style={styles.button}
           />
-        </View>
+        </Animated.View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
+        {/* Footer */}
+        <Animated.View
+          entering={FadeInUp.duration(500).delay(300).easing(Easing.out(Easing.quad))}
+          style={styles.footer}
+        >
+          <Text style={styles.footerText}>¿Ya tienes cuenta? </Text>
           <Link href="/(auth)/login" style={styles.footerLink}>
-            Sign in
+            Inicia sesión
           </Link>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -114,15 +141,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  logo: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: Colors.primary,
-    letterSpacing: -1,
+  wordmark: {
+    width: 220,
+    height: 110,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: Colors.textMuted,
+    marginTop: 4,
   },
   form: {
     gap: 16,
@@ -133,7 +159,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   button: {
-    marginTop: 8,
+    marginTop: 4,
   },
   footer: {
     flexDirection: 'row',

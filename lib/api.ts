@@ -1,5 +1,11 @@
+import * as FileSystem from 'expo-file-system';
 import { supabase } from './supabase';
 import type { VaultNote, Task, CalendarEvent } from '../types';
+
+const BUCKET = 'lifevault-documents';
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+const N8N_UPLOAD_URL = process.env.EXPO_PUBLIC_N8N_UPLOAD_URL!;
 
 // ─── Vault Notes ───────────────────────────────────────────────────────────────
 
@@ -68,6 +74,98 @@ export async function fetchEvents(userId: string): Promise<CalendarEvent[]> {
   if (error) throw error;
   return data ?? [];
 }
+
+export async function uploadDocument(
+  userId: string,
+  uri: string,
+  filename: string,
+  mimeType: string,
+  fileSize: number,
+  meta: { title: string; category: VaultNote['category']; notes?: string }
+): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Sin sesión activa');
+
+  const ext = filename.split('.').pop() ?? 'bin';
+  const path = `${userId}/${Date.now()}.${ext}`;
+
+  const uploadResult = await FileSystem.uploadAsync(
+    `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`,
+    uri,
+    {
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        apikey: SUPABASE_ANON_KEY,
+        'content-type': mimeType,
+        'x-upsert': 'false',
+      },
+    }
+  );
+
+  if (uploadResult.status >= 400) {
+    throw new Error(`Error al subir archivo: ${uploadResult.status}`);
+  }
+
+  const { data: signedData } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(path, 3600);
+
+  fetch(N8N_UPLOAD_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      file_url: signedData?.signedUrl ?? '',
+      file_path: path,
+      user_id: userId,
+      title: meta.title,
+      category: meta.category,
+      file_name: filename,
+      mime_type: mimeType,
+      file_size: fileSize,
+      tags: [],
+      notes: meta.notes ?? null,
+    }),
+  }).catch(() => {});
+}
+
+export async function updateVaultNote(
+  noteId: string,
+  payload: Partial<Pick<VaultNote, 'content' | 'category' | 'is_pinned' | 'title'>>
+): Promise<void> {
+  const { error } = await supabase
+    .from('vault_notes')
+    .update({ ...payload, updated_at: new Date().toISOString() })
+    .eq('id', noteId);
+
+  if (error) throw error;
+}
+
+export async function deleteVaultNote(noteId: string, storagePath?: string): Promise<void> {
+  if (storagePath) {
+    await supabase.storage.from(BUCKET).remove([storagePath]);
+  }
+  const { error } = await supabase.from('vault_notes').delete().eq('id', noteId);
+  if (error) throw error;
+}
+
+export async function getSignedUrl(storagePath: string): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(storagePath, 3600);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+function extractStoragePath(fileUrl?: string): string | undefined {
+  if (!fileUrl) return undefined;
+  if (!fileUrl.startsWith('http')) return fileUrl;
+  const parts = fileUrl.split('/lifevault-documents/');
+  return parts[1] ?? undefined;
+}
+
+export { extractStoragePath };
 
 // ─── AI Assistant ──────────────────────────────────────────────────────────────
 

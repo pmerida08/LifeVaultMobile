@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   FlatList,
   Pressable,
   StyleSheet,
+  TextInput,
 } from 'react-native';
 import Animated, {
   FadeInDown,
@@ -21,6 +22,8 @@ import { useDocumentsStore } from '../../store/documents.store';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Spinner } from '../../components/ui/Spinner';
+import { UploadModal } from '../../components/vault/UploadModal';
+import { DetailModal } from '../../components/vault/DetailModal';
 import { Colors } from '../../constants/colors';
 import type { VaultNote } from '../../types';
 
@@ -65,7 +68,15 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function NoteCard({ note, index }: { note: VaultNote; index: number }) {
+function NoteCard({
+  note,
+  index,
+  onPress,
+}: {
+  note: VaultNote;
+  index: number;
+  onPress: () => void;
+}) {
   const icon = CATEGORY_ICONS[note.category ?? 'other'] ?? 'document-outline';
   const variant = CATEGORY_VARIANTS[note.category ?? 'other'] ?? 'muted';
   const iconColor = CATEGORY_COLORS[note.category ?? 'other'] ?? Colors.textMuted;
@@ -73,6 +84,7 @@ function NoteCard({ note, index }: { note: VaultNote; index: number }) {
   return (
     <Animated.View entering={FadeInUp.duration(400).delay(index * 60)}>
       <Pressable
+        onPress={onPress}
         android_ripple={{ color: Colors.primarySurface }}
         accessibilityRole="button"
         accessibilityLabel={note.title}
@@ -94,6 +106,7 @@ function NoteCard({ note, index }: { note: VaultNote; index: number }) {
                 accessibilityLabel="Documento fijado"
               />
             )}
+            <Ionicons name="chevron-forward" size={16} color={Colors.border} />
           </View>
           <View style={styles.noteMeta}>
             {note.category && <Badge label={note.category} variant={variant} />}
@@ -133,11 +146,15 @@ export default function VaultScreen() {
   const { user } = useAuthStore();
   const { loading, setCategory, selectedCategory, filteredNotes, load } = useDocumentsStore();
 
+  const [search, setSearch] = useState('');
+  const [uploadVisible, setUploadVisible] = useState(false);
+  const [selectedNote, setSelectedNote] = useState<VaultNote | null>(null);
+
   useEffect(() => {
     if (user) load(user.id);
   }, [user]);
 
-  const notes = filteredNotes();
+  const notes = filteredNotes(search);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -145,6 +162,21 @@ export default function VaultScreen() {
       <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
         <Text style={styles.title}>Vault</Text>
         <Text style={styles.subtitle}>{notes.length} documentos</Text>
+      </Animated.View>
+
+      {/* Búsqueda */}
+      <Animated.View entering={FadeInDown.duration(400).delay(60)} style={styles.searchWrapper}>
+        <Ionicons name="search-outline" size={17} color={Colors.textMuted} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar documentos…"
+          placeholderTextColor={Colors.textMuted}
+          value={search}
+          onChangeText={setSearch}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+          accessibilityLabel="Buscar documentos"
+        />
       </Animated.View>
 
       {/* Category filter */}
@@ -186,15 +218,35 @@ export default function VaultScreen() {
           ListEmptyComponent={
             <Animated.View entering={FadeInUp.duration(400)} style={styles.empty}>
               <Ionicons name="folder-open-outline" size={52} color={Colors.border} accessibilityElementsHidden />
-              <Text style={styles.emptyTitle}>Sin documentos</Text>
-              <Text style={styles.emptySubtitle}>Toca + para añadir el primero</Text>
+              <Text style={styles.emptyTitle}>
+                {search ? 'Sin resultados' : 'Sin documentos'}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {search ? `No hay documentos con "${search}"` : 'Toca + para añadir el primero'}
+              </Text>
             </Animated.View>
           }
-          renderItem={({ item, index }) => <NoteCard note={item} index={index} />}
+          renderItem={({ item, index }) => (
+            <NoteCard
+              note={item}
+              index={index}
+              onPress={() => setSelectedNote(item)}
+            />
+          )}
         />
       )}
 
-      <FAB onPress={() => {}} />
+      <FAB onPress={() => setUploadVisible(true)} />
+
+      <UploadModal
+        visible={uploadVisible}
+        onClose={() => setUploadVisible(false)}
+      />
+
+      <DetailModal
+        note={selectedNote}
+        onClose={() => setSelectedNote(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -218,6 +270,28 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: Colors.textMuted,
+  },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 8,
+    height: 44,
+  },
+  searchIcon: {
+    flexShrink: 0,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.text,
+    paddingVertical: 0,
   },
   filterList: {
     paddingHorizontal: 16,

@@ -3,10 +3,12 @@ import {
   Pressable,
   Text,
   ActivityIndicator,
+  View,
   ViewStyle,
   TextStyle,
   StyleSheet,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -26,6 +28,7 @@ interface ButtonProps {
   size?: Size;
   loading?: boolean;
   disabled?: boolean;
+  icon?: React.ComponentProps<typeof Ionicons>['name'];
   style?: ViewStyle;
 }
 
@@ -77,6 +80,7 @@ export function Button({
   size = 'md',
   loading = false,
   disabled = false,
+  icon,
   style,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
@@ -118,7 +122,10 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={vStyle.text.color as string} size="small" />
       ) : (
-        <Text style={[styles.text, vStyle.text, sStyle.text]}>{label}</Text>
+        <View style={styles.content}>
+          {icon && <Ionicons name={icon} size={16} color={vStyle.text.color as string} />}
+          <Text style={[styles.text, vStyle.text, sStyle.text]}>{label}</Text>
+        </View>
       )}
     </AnimatedPressable>
   );
@@ -129,6 +136,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   text: {
     fontWeight: '600',

@@ -1,20 +1,32 @@
 import { create } from 'zustand';
-import { fetchVaultNotes } from '../lib/api';
+import { fetchVaultNotes, uploadDocument, updateVaultNote, deleteVaultNote, extractStoragePath } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import type { VaultNote } from '../types';
+
+interface UploadMeta {
+  title: string;
+  category: VaultNote['category'];
+  notes?: string;
+}
 
 interface DocumentsStore {
   notes: VaultNote[];
   loading: boolean;
+  uploading: boolean;
   error: string | null;
   selectedCategory: VaultNote['category'] | null;
   load: (userId: string) => Promise<void>;
+  upload: (userId: string, uri: string, filename: string, mimeType: string, fileSize: number, meta: UploadMeta) => Promise<void>;
+  updateNote: (noteId: string, payload: Partial<Pick<VaultNote, 'content' | 'category' | 'is_pinned' | 'title'>>) => Promise<void>;
+  deleteNote: (noteId: string, fileUrl?: string) => Promise<void>;
   setCategory: (category: VaultNote['category'] | null) => void;
-  filteredNotes: () => VaultNote[];
+  filteredNotes: (query?: string) => VaultNote[];
 }
 
 export const useDocumentsStore = create<DocumentsStore>((set, get) => ({
   notes: [],
   loading: false,
+  uploading: false,
   error: null,
   selectedCategory: null,
 
@@ -28,11 +40,66 @@ export const useDocumentsStore = create<DocumentsStore>((set, get) => ({
     }
   },
 
+  upload: async (userId, uri, filename, mimeType, fileSize, meta) => {
+    set({ uploading: true, error: null });
+    try {
+      await uploadDocument(userId, uri, filename, mimeType, fileSize, meta);
+
+      // Escuchar via Realtime el INSERT que hará n8n en vault_notes
+      const channelId = `vault-upload-${Date.now()}`;
+      const channel = supabase
+        .channel(channelId)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'vault_notes', filter: `user_id=eq.${userId}` },
+          async () => {
+            const notes = await fetchVaultNotes(userId);
+            set({ notes });
+            supabase.removeChannel(channel);
+          }
+        )
+        .subscribe();
+
+      set({ uploading: false });
+    } catch (e: any) {
+      set({ error: e.message, uploading: false });
+      throw e;
+    }
+  },
+
+  updateNote: async (noteId, payload) => {
+    try {
+      await updateVaultNote(noteId, payload);
+      set((state) => ({
+        notes: state.notes.map((n) => n.id === noteId ? { ...n, ...payload } : n),
+      }));
+    } catch (e: any) {
+      set({ error: e.message });
+      throw e;
+    }
+  },
+
+  deleteNote: async (noteId, fileUrl) => {
+    try {
+      const storagePath = extractStoragePath(fileUrl);
+      await deleteVaultNote(noteId, storagePath);
+      set((state) => ({ notes: state.notes.filter((n) => n.id !== noteId) }));
+    } catch (e: any) {
+      set({ error: e.message });
+      throw e;
+    }
+  },
+
   setCategory: (category) => set({ selectedCategory: category }),
 
-  filteredNotes: () => {
+  filteredNotes: (query = '') => {
     const { notes, selectedCategory } = get();
-    if (!selectedCategory) return notes;
-    return notes.filter((n) => n.category === selectedCategory);
+    let result = notes;
+    if (selectedCategory) result = result.filter((n) => n.category === selectedCategory);
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      result = result.filter((n) => n.title.toLowerCase().includes(q));
+    }
+    return result;
   },
 }));
