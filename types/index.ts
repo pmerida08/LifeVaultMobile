@@ -31,6 +31,7 @@ export interface Task {
   priority: 'low' | 'medium' | 'high'
   due_date?: string
   tags: string[]
+  google_task_id?: string
   created_at: string
   updated_at: string
 }
@@ -44,6 +45,7 @@ export interface CalendarEvent {
   end_at?: string
   all_day: boolean
   color?: string
+  google_event_id?: string
   created_at: string
 }
 
@@ -52,4 +54,6 @@ export interface AIMessage {
   role: 'user' | 'assistant'
   content: string
   created_at: string
+  isStreaming?: boolean
+  attachments?: VaultNote[]
 }

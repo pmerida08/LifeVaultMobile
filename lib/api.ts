@@ -58,6 +58,22 @@ export async function updateTaskStatus(
   if (error) throw error;
 }
 
+export async function updateTask(
+  taskId: string,
+  payload: Partial<Pick<Task, 'title' | 'description' | 'priority' | 'due_date' | 'google_task_id'>>
+): Promise<void> {
+  const { error } = await supabase
+    .from('tasks')
+    .update({ ...payload, updated_at: new Date().toISOString() })
+    .eq('id', taskId);
+  if (error) throw error;
+}
+
+export async function deleteTask(taskId: string): Promise<void> {
+  const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+  if (error) throw error;
+}
+
 // ─── Events ────────────────────────────────────────────────────────────────────
 
 export async function fetchEvents(userId: string): Promise<CalendarEvent[]> {
@@ -71,6 +87,35 @@ export async function fetchEvents(userId: string): Promise<CalendarEvent[]> {
 
   if (error) throw error;
   return data ?? [];
+}
+
+export async function createEvent(
+  userId: string,
+  payload: Pick<CalendarEvent, 'title' | 'description' | 'start_at' | 'end_at' | 'all_day' | 'color'>
+): Promise<CalendarEvent> {
+  const { data, error } = await supabase
+    .from('events')
+    .insert({ ...payload, user_id: userId })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateEvent(
+  eventId: string,
+  payload: Partial<Pick<CalendarEvent, 'title' | 'description' | 'start_at' | 'end_at' | 'all_day' | 'color' | 'google_event_id'>>
+): Promise<void> {
+  const { error } = await supabase
+    .from('events')
+    .update(payload)
+    .eq('id', eventId);
+  if (error) throw error;
+}
+
+export async function deleteEvent(eventId: string): Promise<void> {
+  const { error } = await supabase.from('events').delete().eq('id', eventId);
+  if (error) throw error;
 }
 
 export async function uploadDocument(
@@ -195,4 +240,100 @@ export async function sendAIMessage(
 
   if (error) throw error;
   return data?.reply ?? '';
+}
+
+interface StreamCallbacks {
+  onToken: (token: string) => void;
+  onAttachments?: (attachments: VaultNote[]) => void;
+  onDone: () => void;
+  onError: (error: Error) => void;
+}
+
+export async function streamAIMessage(
+  sessionId: string,
+  message: string,
+  callbacks: StreamCallbacks
+): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    callbacks.onError(new Error('Sin sesión activa'));
+    return;
+  }
+
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+  const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${supabaseUrl}/functions/v1/ai-assistant`);
+    xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+    xhr.setRequestHeader('apikey', supabaseAnonKey);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+
+    let processed = 0;
+    let lineBuffer = '';
+    let isDone = false;
+
+    const processLine = (line: string) => {
+      if (!line.startsWith('data: ')) return;
+      const raw = line.slice(6).trim();
+      if (raw === '[DONE]') {
+        if (!isDone) { isDone = true; callbacks.onDone(); }
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        const content =
+          parsed.content ??
+          parsed.token ??
+          parsed.choices?.[0]?.delta?.content ??
+          parsed.delta?.text ??
+          null;
+        if (content) callbacks.onToken(content);
+        if (parsed.attachments) callbacks.onAttachments?.(parsed.attachments);
+        if (parsed.done === true && !isDone) { isDone = true; callbacks.onDone(); }
+      } catch {
+        if (raw) callbacks.onToken(raw);
+      }
+    };
+
+    const processChunk = (newText: string) => {
+      lineBuffer += newText;
+      const lines = lineBuffer.split('\n');
+      lineBuffer = lines.pop() ?? '';
+      lines.forEach(processLine);
+    };
+
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState >= 3 && xhr.responseText.length > processed) {
+        processChunk(xhr.responseText.slice(processed));
+        processed = xhr.responseText.length;
+      }
+      if (xhr.readyState === 4) {
+        if (lineBuffer.trim()) processLine(lineBuffer.trim());
+        if (!isDone) {
+          if (xhr.status === 200) {
+            // Respuesta JSON normal (sin SSE)
+            try {
+              const json = JSON.parse(xhr.responseText);
+              const reply = json.reply ?? json.content ?? json.message ?? '';
+              if (reply) callbacks.onToken(reply);
+            } catch { /* responseText ya procesado como SSE */ }
+            callbacks.onDone();
+          } else {
+            callbacks.onError(new Error(`HTTP ${xhr.status}`));
+          }
+          isDone = true;
+        }
+        resolve();
+      }
+    };
+
+    xhr.onerror = () => {
+      if (!isDone) callbacks.onError(new Error('Error de red'));
+      resolve();
+    };
+
+    xhr.send(JSON.stringify({ session_id: sessionId, message }));
+  });
 }

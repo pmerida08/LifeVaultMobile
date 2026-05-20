@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts,
@@ -15,6 +15,7 @@ import '../global.css';
 
 export default function RootLayout() {
   const { user, loading, initialize } = useAuthStore();
+  const segments = useSegments();
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
@@ -28,13 +29,17 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!loading) {
-      if (user) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/(auth)/login');
-      }
+    if (loading) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+    const inTabsGroup = segments[0] === '(tabs)';
+
+    if (user && !inTabsGroup) {
+      router.replace('/(tabs)');
+    } else if (!user && !inAuthGroup) {
+      router.replace('/(auth)/login');
     }
+    // Si ya está en el grupo correcto, no navega → evita el doble render
   }, [user, loading]);
 
   if (loading || !fontsLoaded) {
@@ -49,8 +54,8 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
     </SafeAreaProvider>

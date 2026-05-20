@@ -5,7 +5,10 @@ import type { User } from '../types';
 
 GoogleSignin.configure({
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  scopes: ['profile', 'email'],
+  scopes: [
+    'https://www.googleapis.com/auth/tasks',
+    'https://www.googleapis.com/auth/calendar',
+  ],
 });
 
 interface AuthStore {
@@ -97,6 +100,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
   logout: async () => {
     await supabase.auth.signOut();
     try { await GoogleSignin.signOut(); } catch (_) {}
-    set({ user: null });
+    // user: null lo gestiona onAuthStateChange — no duplicar el set
   },
 }));
