@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { fetchVaultNotes, uploadDocument, updateVaultNote, deleteVaultNote, extractStoragePath } from '../lib/api';
-import { supabase } from '../lib/supabase';
 import type { VaultNote } from '../types';
 
 interface UploadMeta {
@@ -45,22 +44,9 @@ export const useDocumentsStore = create<DocumentsStore>((set, get) => ({
     try {
       await uploadDocument(userId, uri, filename, mimeType, fileSize, meta);
 
-      // Escuchar via Realtime el INSERT que hará n8n en vault_notes
-      const channelId = `vault-upload-${Date.now()}`;
-      const channel = supabase
-        .channel(channelId)
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'vault_notes', filter: `user_id=eq.${userId}` },
-          async () => {
-            const notes = await fetchVaultNotes(userId);
-            set({ notes });
-            supabase.removeChannel(channel);
-          }
-        )
-        .subscribe();
-
-      set({ uploading: false });
+      // El INSERT lo hacemos nosotros en uploadDocument — refrescar directamente
+      const notes = await fetchVaultNotes(userId);
+      set({ notes, uploading: false });
     } catch (e: any) {
       set({ error: e.message, uploading: false });
       throw e;

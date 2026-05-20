@@ -105,9 +105,25 @@ export async function uploadDocument(
 
   if (uploadError) throw new Error(`Storage: ${uploadError.message}`);
 
-  // Tamaño real del archivo a partir de los bytes leídos
   const actualSize = fileSize > 0 ? fileSize : bytes.byteLength;
 
+  // Insertar vault_note directamente — no dependemos de n8n en móvil
+  const { error: insertError } = await supabase.from('vault_notes').insert({
+    user_id: userId,
+    title: meta.title,
+    content: meta.notes ?? '',
+    category: meta.category,
+    file_url: path,
+    file_name: filename,
+    file_size: actualSize,
+    mime_type: mimeType || 'application/octet-stream',
+    tags: [],
+    is_pinned: false,
+  });
+
+  if (insertError) throw new Error(`DB: ${insertError.message}`);
+
+  // Fire-and-forget a n8n para procesamiento IA (OCR, etc.) — opcional
   const { data: signedData } = await supabase.storage
     .from(BUCKET)
     .createSignedUrl(path, 3600);
