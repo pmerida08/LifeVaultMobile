@@ -109,8 +109,8 @@ function NoteCard({
             <Ionicons name="chevron-forward" size={16} color={Colors.border} />
           </View>
           <View style={styles.noteMeta}>
-            {note.category && <Badge label={note.category} variant={variant} />}
-            {note.file_name && (
+            {!!note.category && <Badge label={note.category} variant={variant} />}
+            {!!note.file_name && (
               <Text style={styles.fileName} numberOfLines={1}>{note.file_name}</Text>
             )}
           </View>

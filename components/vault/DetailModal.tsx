@@ -153,13 +153,13 @@ export function DetailModal({ note, onClose }: DetailModalProps) {
                 <Ionicons name="calendar-outline" size={13} color={Colors.textMuted} />
                 <Text style={styles.metaText}>{formatDate(note.created_at)}</Text>
               </View>
-              {note.file_size && (
+              {!!note.file_size && (
                 <View style={styles.metaItem}>
                   <Ionicons name="document-outline" size={13} color={Colors.textMuted} />
                   <Text style={styles.metaText}>{formatBytes(note.file_size)}</Text>
                 </View>
               )}
-              {note.file_name && (
+              {!!note.file_name && (
                 <View style={styles.metaItem}>
                   <Ionicons name="attach-outline" size={13} color={Colors.textMuted} />
                   <Text style={styles.metaText} numberOfLines={1}>{note.file_name}</Text>
