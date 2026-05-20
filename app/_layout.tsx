@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
 import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -11,14 +10,17 @@ import { useFonts,
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { useAuthStore } from '../store/auth.store';
+import { useThemeStore } from '../store/theme.store';
+import { useResolvedTheme } from '../constants/colors';
 import { Spinner } from '../components/ui/Spinner';
 import { ToastProvider } from '../lib/toast';
 import '../global.css';
 
 export default function RootLayout() {
   const { user, loading, initialize } = useAuthStore();
+  const { initialize: initTheme } = useThemeStore();
   const segments = useSegments();
-  const colorScheme = useColorScheme();
+  const resolved = useResolvedTheme();
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
@@ -29,6 +31,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     initialize();
+    initTheme();
   }, []);
 
   useEffect(() => {
@@ -52,7 +55,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={resolved === 'dark' ? 'light' : 'dark'} />
       <ToastProvider>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />

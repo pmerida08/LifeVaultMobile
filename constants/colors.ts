@@ -1,4 +1,5 @@
 import { useColorScheme } from 'react-native';
+import { useThemeStore } from '../store/theme.store';
 
 export const LightColors = {
   primary:         '#3730AB',
@@ -67,7 +68,14 @@ export type ThemeColors = {
   readonly [K in keyof typeof LightColors]: string;
 };
 
+export function useResolvedTheme(): 'light' | 'dark' {
+  const device = useColorScheme();
+  const { theme } = useThemeStore();
+  if (theme === 'system') return device === 'dark' ? 'dark' : 'light';
+  return theme;
+}
+
 export function useThemeColors(): ThemeColors {
-  const scheme = useColorScheme();
-  return scheme === 'dark' ? DarkColors : LightColors;
+  const resolved = useResolvedTheme();
+  return resolved === 'dark' ? DarkColors : LightColors;
 }
