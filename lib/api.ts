@@ -89,7 +89,7 @@ export async function uploadDocument(
 
   // Leer el archivo como base64 — más fiable que uploadAsync en Android (content:// URIs)
   const base64 = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
+    encoding: 'base64' as any,
   });
 
   // Decodificar base64 → Uint8Array (atob disponible en Hermes/RN)
