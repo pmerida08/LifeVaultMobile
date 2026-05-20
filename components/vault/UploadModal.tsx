@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/auth.store';
 import { useDocumentsStore } from '../../store/documents.store';
@@ -54,7 +55,12 @@ export function UploadModal({ visible, onClose }: UploadModalProps) {
     });
     if (result.canceled) return;
     const asset = result.assets[0];
-    setFile(asset);
+
+    // Copiar a documentDirectory — más persistente que la caché del picker
+    const stablePath = `${FileSystem.documentDirectory}lv_upload_${Date.now()}_${asset.name}`;
+    await FileSystem.copyAsync({ from: asset.uri, to: stablePath });
+
+    setFile({ ...asset, uri: stablePath });
     if (!title) setTitle(asset.name.replace(/\.[^.]+$/, ''));
   };
 
@@ -70,9 +76,12 @@ export function UploadModal({ visible, onClose }: UploadModalProps) {
         file.size ?? 0,
         { title: title.trim(), category, notes: notes.trim() || undefined }
       );
+      // Limpiar archivo temporal tras upload exitoso
+      FileSystem.deleteAsync(file.uri, { idempotent: true }).catch(() => {});
       handleClose();
-      Alert.alert('Subiendo...', 'El documento se está procesando. Aparecerá en el Vault en unos segundos.');
     } catch (e: any) {
+      // Limpiar también en caso de error
+      FileSystem.deleteAsync(file.uri, { idempotent: true }).catch(() => {});
       Alert.alert('Error al subir', e?.message ?? 'Error desconocido');
     }
   };
