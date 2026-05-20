@@ -15,7 +15,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { Colors } from '../../constants/colors';
+import { useThemeColors } from '../../constants/colors';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
@@ -31,29 +31,6 @@ interface ButtonProps {
   icon?: React.ComponentProps<typeof Ionicons>['name'];
   style?: ViewStyle;
 }
-
-const variantStyles: Record<Variant, { container: ViewStyle; text: TextStyle }> = {
-  primary: {
-    container: { backgroundColor: Colors.primary },
-    text: { color: Colors.white },
-  },
-  secondary: {
-    container: {
-      backgroundColor: Colors.surfaceElevated,
-      borderWidth: 1,
-      borderColor: Colors.primary,
-    },
-    text: { color: Colors.primary },
-  },
-  ghost: {
-    container: { backgroundColor: 'transparent' },
-    text: { color: Colors.primary },
-  },
-  danger: {
-    container: { backgroundColor: Colors.danger },
-    text: { color: Colors.white },
-  },
-};
 
 const sizeStyles: Record<Size, { container: ViewStyle; text: TextStyle }> = {
   sm: {
@@ -83,10 +60,34 @@ export function Button({
   icon,
   style,
 }: ButtonProps) {
+  const colors = useThemeColors();
   const isDisabled = disabled || loading;
-  const vStyle = variantStyles[variant];
   const sStyle = sizeStyles[size];
 
+  const variantStyles: Record<Variant, { container: ViewStyle; text: TextStyle }> = {
+    primary: {
+      container: { backgroundColor: colors.primary },
+      text: { color: colors.white },
+    },
+    secondary: {
+      container: {
+        backgroundColor: colors.surfaceElevated,
+        borderWidth: 1,
+        borderColor: colors.primary,
+      },
+      text: { color: colors.primary },
+    },
+    ghost: {
+      container: { backgroundColor: 'transparent' },
+      text: { color: colors.primary },
+    },
+    danger: {
+      container: { backgroundColor: colors.danger },
+      text: { color: colors.white },
+    },
+  };
+
+  const vStyle = variantStyles[variant];
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({

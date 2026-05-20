@@ -21,11 +21,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Colors } from '../../constants/colors';
+import { Colors, useThemeColors } from '../../constants/colors';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function LoginScreen() {
+  const colors = useThemeColors();
   const { login, loginWithGoogle } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -66,7 +67,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -77,18 +78,12 @@ export default function LoginScreen() {
           style={styles.header}
         >
           <Image
-            source={require('../../assets/logo-icon.png')}
-            style={styles.logoImage}
-            resizeMode="contain"
-            accessibilityLabel="LifeVault logo"
-          />
-          <Image
             source={require('../../assets/logo.png')}
             style={styles.wordmark}
             resizeMode="contain"
             accessibilityLabel="LifeVault"
           />
-          <Text style={styles.subtitle}>Tu bóveda personal de conocimiento</Text>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>Tu bóveda personal de conocimiento</Text>
         </Animated.View>
 
         {/* Form */}
@@ -115,7 +110,7 @@ export default function LoginScreen() {
             autoComplete="password"
             textContentType="password"
           />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
           <Button
             label="Entrar"
             onPress={handleLogin}
@@ -125,9 +120,9 @@ export default function LoginScreen() {
           />
 
           <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>o</Text>
-            <View style={styles.dividerLine} />
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.textMuted }]}>o</Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
           </View>
 
           <AnimatedPressable
@@ -141,10 +136,10 @@ export default function LoginScreen() {
             disabled={googleLoading}
             accessibilityRole="button"
             accessibilityLabel="Continuar con Google"
-            style={[styles.googleButton, googleAnimStyle]}
+            style={[styles.googleButton, { backgroundColor: colors.surface, borderColor: colors.border }, googleAnimStyle]}
           >
             <Text style={styles.googleIcon}>G</Text>
-            <Text style={styles.googleText}>
+            <Text style={[styles.googleText, { color: colors.text }]}>
               {googleLoading ? 'Conectando...' : 'Continuar con Google'}
             </Text>
           </AnimatedPressable>
@@ -155,8 +150,8 @@ export default function LoginScreen() {
           entering={FadeInUp.duration(500).delay(300).easing(Easing.out(Easing.quad))}
           style={styles.footer}
         >
-          <Text style={styles.footerText}>¿No tienes cuenta? </Text>
-          <Link href="/(auth)/register" style={styles.footerLink}>
+          <Text style={[styles.footerText, { color: colors.textMuted }]}>¿No tienes cuenta? </Text>
+          <Link href="/(auth)/register" style={[styles.footerLink, { color: colors.primary }]}>
             Regístrate
           </Link>
         </Animated.View>
@@ -180,14 +175,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  logoImage: {
-    width: 72,
-    height: 72,
-    marginBottom: 4,
-  },
   wordmark: {
-    width: 180,
-    height: 44,
+    width: 220,
+    height: 110,
   },
   subtitle: {
     fontSize: 15,

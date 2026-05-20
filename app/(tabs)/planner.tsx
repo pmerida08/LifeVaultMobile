@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,11 @@ import {
   Modal,
   StyleSheet,
   ScrollView,
-  Alert,
   Switch,
   TextInput as RNTextInput,
+  RefreshControl,
 } from 'react-native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/auth.store';
@@ -19,9 +20,10 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Spinner } from '../../components/ui/Spinner';
+import { SkeletonPlanner } from '../../components/ui/Skeleton';
 import { GoogleConnectButton } from '../../components/GoogleConnectButton';
-import { Colors } from '../../constants/colors';
+import { useThemeColors } from '../../constants/colors';
+import { useToast } from '../../lib/toast';
 import { isConnected } from '../../lib/google-auth';
 import { importAllFromGoogle } from '../../lib/google-sync';
 import type { Task, CalendarEvent } from '../../types';
@@ -76,7 +78,7 @@ function formatDisplay(iso: string): string {
 
 // ─── TaskItem ─────────────────────────────────────────────────────────────────
 
-function TaskItem({
+const TaskItem = React.memo(function TaskItem({
   task,
   onToggle,
   onEdit,
@@ -87,13 +89,14 @@ function TaskItem({
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
 }) {
+  const colors = useThemeColors();
   const nextStatus: Task['status'] =
     task.status === 'todo' ? 'in_progress'
     : task.status === 'in_progress' ? 'done'
     : 'todo';
 
   return (
-    <Card style={styles.taskCard}>
+    <Card>
       <View style={styles.taskRow}>
         <TouchableOpacity onPress={() => onToggle(task.id, nextStatus)}>
           <Ionicons
@@ -104,37 +107,43 @@ function TaskItem({
             }
             size={22}
             color={
-              task.status === 'done' ? Colors.success
-              : task.status === 'in_progress' ? Colors.warning
-              : Colors.textMuted
+              task.status === 'done' ? colors.success
+              : task.status === 'in_progress' ? colors.warning
+              : colors.textMuted
             }
           />
         </TouchableOpacity>
         <View style={styles.taskContent}>
           <Text
-            style={[styles.taskTitle, task.status === 'done' && styles.taskTitleDone]}
+            style={[
+              styles.taskTitle,
+              { color: task.status === 'done' ? colors.textMuted : colors.text },
+              task.status === 'done' && styles.taskTitleDone,
+            ]}
             numberOfLines={2}
           >
             {task.title}
           </Text>
           {task.due_date && (
-            <Text style={styles.taskDue}>Vence {formatDisplay(task.due_date)}</Text>
+            <Text style={[styles.taskDue, { color: colors.textMuted }]}>
+              Vence {formatDisplay(task.due_date)}
+            </Text>
           )}
         </View>
         <TouchableOpacity onPress={() => onEdit(task)} style={styles.actionBtn}>
-          <Ionicons name="create-outline" size={16} color={Colors.textMuted} />
+          <Ionicons name="create-outline" size={16} color={colors.textMuted} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => onDelete(task.id)} style={styles.actionBtn}>
-          <Ionicons name="trash-outline" size={16} color={Colors.danger} />
+          <Ionicons name="trash-outline" size={16} color={colors.danger} />
         </TouchableOpacity>
       </View>
     </Card>
   );
-}
+});
 
 // ─── EventItem ────────────────────────────────────────────────────────────────
 
-function EventItem({
+const EventItem = React.memo(function EventItem({
   event,
   onEdit,
   onDelete,
@@ -143,22 +152,23 @@ function EventItem({
   onEdit: (event: CalendarEvent) => void;
   onDelete: (id: string) => void;
 }) {
+  const colors = useThemeColors();
   return (
     <Card style={styles.eventCard}>
-      <View style={[styles.eventDot, { backgroundColor: event.color ?? Colors.primary }]} />
+      <View style={[styles.eventDot, { backgroundColor: event.color ?? colors.primary }]} />
       <View style={styles.eventContent}>
-        <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
-        <Text style={styles.eventDate}>{formatDisplay(event.start_at)}</Text>
+        <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={1}>{event.title}</Text>
+        <Text style={[styles.eventDate, { color: colors.textMuted }]}>{formatDisplay(event.start_at)}</Text>
       </View>
       <TouchableOpacity onPress={() => onEdit(event)} style={styles.actionBtn}>
-        <Ionicons name="create-outline" size={16} color={Colors.textMuted} />
+        <Ionicons name="create-outline" size={16} color={colors.textMuted} />
       </TouchableOpacity>
       <TouchableOpacity onPress={() => onDelete(event.id)} style={styles.actionBtn}>
-        <Ionicons name="trash-outline" size={16} color={Colors.danger} />
+        <Ionicons name="trash-outline" size={16} color={colors.danger} />
       </TouchableOpacity>
     </Card>
   );
-}
+});
 
 // ─── TaskModal ────────────────────────────────────────────────────────────────
 
@@ -171,6 +181,7 @@ function TaskModal({
   onClose: () => void;
   onSubmit: (data: Pick<Task, 'title' | 'description' | 'priority' | 'due_date'>) => Promise<void>;
 }) {
+  const colors = useThemeColors();
   const isEdit = state.mode === 'edit';
   const [title, setTitle] = useState(isEdit ? state.task.title : '');
   const [description, setDescription] = useState(isEdit ? (state.task.description ?? '') : '');
@@ -191,9 +202,11 @@ function TaskModal({
     onClose();
   };
 
+  const priorities: Task['priority'][] = ['low', 'medium', 'high'];
+
   return (
-    <View style={[styles.modal, styles.modalContent]}>
-      <Text style={styles.modalTitle}>{isEdit ? 'Editar tarea' : 'Nueva tarea'}</Text>
+    <View style={[styles.modal, { backgroundColor: colors.surface }]}>
+      <Text style={[styles.modalTitle, { color: colors.text }]}>{isEdit ? 'Editar tarea' : 'Nueva tarea'}</Text>
       <Input
         label="Título"
         value={title}
@@ -207,13 +220,30 @@ function TaskModal({
         onChangeText={setDescription}
         placeholder="Notas..."
       />
-      <Text style={styles.fieldLabel}>Fecha límite</Text>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>Prioridad</Text>
+      <View style={styles.chipRow}>
+        {priorities.map((p) => (
+          <TouchableOpacity
+            key={p}
+            onPress={() => setPriority(p)}
+            style={[
+              styles.chip,
+              { backgroundColor: priority === p ? colors.primary : colors.background },
+            ]}
+          >
+            <Text style={[styles.chipText, { color: priority === p ? colors.white : colors.textMuted }]}>
+              {p === 'low' ? 'Baja' : p === 'medium' ? 'Media' : 'Alta'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>Fecha límite</Text>
       <RNTextInput
-        style={styles.dateInput}
+        style={[styles.dateInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
         value={dueDate}
         onChangeText={setDueDate}
         placeholder="AAAA-MM-DD HH:MM"
-        placeholderTextColor={Colors.textMuted}
+        placeholderTextColor={colors.textMuted}
         keyboardType="numbers-and-punctuation"
       />
       <View style={styles.modalActions}>
@@ -236,11 +266,14 @@ function EventModal({
   state,
   onClose,
   onSubmit,
+  onError,
 }: {
   state: Exclude<EventModalState, null>;
   onClose: () => void;
   onSubmit: (data: Pick<CalendarEvent, 'title' | 'description' | 'start_at' | 'end_at' | 'all_day' | 'color'>) => Promise<void>;
+  onError: (msg: string) => void;
 }) {
+  const colors = useThemeColors();
   const isEdit = state.mode === 'edit';
   const [title, setTitle] = useState(isEdit ? state.event.title : '');
   const [description, setDescription] = useState(isEdit ? (state.event.description ?? '') : '');
@@ -254,7 +287,7 @@ function EventModal({
     if (!title.trim() || !startAt.trim()) return;
     const parsedStart = parseDateInput(startAt);
     if (!parsedStart) {
-      Alert.alert('Fecha inválida', 'Usa el formato AAAA-MM-DD HH:MM');
+      onError('Fecha inválida. Usa el formato AAAA-MM-DD HH:MM');
       return;
     }
     setLoading(true);
@@ -272,12 +305,12 @@ function EventModal({
 
   return (
     <ScrollView
-      style={styles.modal}
-      contentContainerStyle={styles.modalContent}
+      style={[styles.modal, { backgroundColor: colors.surface }]}
+      contentContainerStyle={[styles.modalContent, { gap: 16, paddingBottom: 40 }]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={styles.modalTitle}>{isEdit ? 'Editar evento' : 'Nuevo evento'}</Text>
+      <Text style={[styles.modalTitle, { color: colors.text }]}>{isEdit ? 'Editar evento' : 'Nuevo evento'}</Text>
       <Input
         label="Título"
         value={title}
@@ -291,34 +324,34 @@ function EventModal({
         onChangeText={setDescription}
         placeholder="Notas..."
       />
-      <Text style={styles.fieldLabel}>Inicio (AAAA-MM-DD HH:MM)</Text>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>Inicio (AAAA-MM-DD HH:MM)</Text>
       <RNTextInput
-        style={styles.dateInput}
+        style={[styles.dateInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
         value={startAt}
         onChangeText={setStartAt}
         placeholder="2024-12-31 10:00"
-        placeholderTextColor={Colors.textMuted}
+        placeholderTextColor={colors.textMuted}
         keyboardType="numbers-and-punctuation"
       />
-      <Text style={styles.fieldLabel}>Fin (AAAA-MM-DD HH:MM, opcional)</Text>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>Fin (AAAA-MM-DD HH:MM, opcional)</Text>
       <RNTextInput
-        style={styles.dateInput}
+        style={[styles.dateInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
         value={endAt}
         onChangeText={setEndAt}
         placeholder="2024-12-31 11:00"
-        placeholderTextColor={Colors.textMuted}
+        placeholderTextColor={colors.textMuted}
         keyboardType="numbers-and-punctuation"
       />
       <View style={styles.switchRow}>
-        <Text style={styles.fieldLabel}>Todo el día</Text>
+        <Text style={[styles.fieldLabel, { color: colors.text }]}>Todo el día</Text>
         <Switch
           value={allDay}
           onValueChange={setAllDay}
-          trackColor={{ true: Colors.primary }}
-          thumbColor={Colors.white}
+          trackColor={{ true: colors.primary }}
+          thumbColor={colors.white}
         />
       </View>
-      <Text style={styles.fieldLabel}>Color</Text>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>Color</Text>
       <View style={styles.colorRow}>
         {EVENT_COLORS.map((c) => (
           <TouchableOpacity
@@ -327,7 +360,7 @@ function EventModal({
             style={[
               styles.colorDot,
               { backgroundColor: c },
-              color === c && styles.colorDotSelected,
+              color === c && { borderWidth: 3, borderColor: colors.text },
             ]}
           />
         ))}
@@ -349,6 +382,8 @@ function EventModal({
 // ─── PlannerScreen ────────────────────────────────────────────────────────────
 
 export default function PlannerScreen() {
+  const colors = useThemeColors();
+  const { show: showToast } = useToast();
   const { user } = useAuthStore();
   const {
     tasks,
@@ -371,148 +406,182 @@ export default function PlannerScreen() {
   const [taskModal, setTaskModal] = useState<TaskModalState>(null);
   const [eventModal, setEventModal] = useState<EventModalState>(null);
   const [googleConnected, setGoogleConnected] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
+
+  const loadAll = useCallback(async () => {
+    if (!user) return;
+    await Promise.all([loadTasks(user.id), loadEvents(user.id)]);
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
-    loadTasks(user.id);
-    loadEvents(user.id);
+    Promise.all([loadTasks(user.id), loadEvents(user.id)]).finally(() => setInitialLoad(false));
     isConnected().then(setGoogleConnected);
   }, [user]);
 
   useEffect(() => {
     if (!user || !googleConnected) return;
     importAllFromGoogle(user.id)
-      .then(() => {
-        loadTasks(user.id);
-        loadEvents(user.id);
-      })
+      .then(() => loadAll())
       .catch(() => {});
   }, [googleConnected]);
 
-  const handleDeleteTask = (taskId: string) => {
-    Alert.alert('Eliminar tarea', '¿Estás seguro?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => removeTask(taskId) },
-    ]);
-  };
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadAll();
+    setRefreshing(false);
+  }, [loadAll]);
 
-  const handleDeleteEvent = (eventId: string) => {
-    Alert.alert('Eliminar evento', '¿Estás seguro?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => removeEvent(eventId) },
-    ]);
-  };
+  const handleDeleteTask = useCallback((taskId: string) => {
+    removeTask(taskId).then(() => showToast('Tarea eliminada', 'success'));
+  }, [removeTask, showToast]);
 
-  const handleTaskSubmit = async (
+  const handleDeleteEvent = useCallback((eventId: string) => {
+    removeEvent(eventId).then(() => showToast('Evento eliminado', 'success'));
+  }, [removeEvent, showToast]);
+
+  const handleTaskSubmit = useCallback(async (
     data: Pick<Task, 'title' | 'description' | 'priority' | 'due_date'>
   ) => {
     if (!user) return;
-    if (taskModal?.mode === 'edit') {
-      await updateTask(taskModal.task.id, data);
-    } else {
-      await createTask(user.id, data);
+    try {
+      if (taskModal?.mode === 'edit') {
+        await updateTask(taskModal.task.id, data);
+        showToast('Tarea actualizada', 'success');
+      } else {
+        await createTask(user.id, data);
+        showToast('Tarea creada', 'success');
+      }
+    } catch {
+      showToast('Error al guardar la tarea', 'error');
     }
-  };
+  }, [user, taskModal, updateTask, createTask, showToast]);
 
-  const handleEventSubmit = async (
+  const handleEventSubmit = useCallback(async (
     data: Pick<CalendarEvent, 'title' | 'description' | 'start_at' | 'end_at' | 'all_day' | 'color'>
   ) => {
     if (!user) return;
-    if (eventModal?.mode === 'edit') {
-      await updateEvent(eventModal.event.id, data);
-    } else {
-      await createEvent(user.id, data);
+    try {
+      if (eventModal?.mode === 'edit') {
+        await updateEvent(eventModal.event.id, data);
+        showToast('Evento actualizado', 'success');
+      } else {
+        await createEvent(user.id, data);
+        showToast('Evento creado', 'success');
+      }
+    } catch {
+      showToast('Error al guardar el evento', 'error');
     }
-  };
+  }, [user, eventModal, updateEvent, createEvent, showToast]);
 
   const grouped = (['todo', 'in_progress', 'done'] as StatusGroup[]).map((status) => ({
     status,
     tasks: tasks.filter((t) => t.status === status),
   }));
 
+  const isLoading = initialLoad && (tasksLoading || eventsLoading);
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Planner</Text>
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>Planner</Text>
           <View style={styles.headerActions}>
             <GoogleConnectButton
               userId={user?.id ?? ''}
               connected={googleConnected}
               onConnectionChange={(connected) => {
                 setGoogleConnected(connected);
-                if (connected && user) {
-                  loadTasks(user.id);
-                  loadEvents(user.id);
-                }
+                if (connected && user) loadAll();
               }}
             />
             <TouchableOpacity
               onPress={() => setEventModal({ mode: 'create' })}
-              style={[styles.addBtn, styles.addBtnOutline]}
+              style={[styles.addBtn, styles.addBtnOutline, { backgroundColor: colors.surface, borderColor: colors.primary }]}
             >
-              <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
+              <Ionicons name="calendar-outline" size={18} color={colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setTaskModal({ mode: 'create' })}
-              style={styles.addBtn}
+              style={[styles.addBtn, { backgroundColor: colors.primary }]}
             >
-              <Ionicons name="add" size={22} color={Colors.white} />
+              <Ionicons name="add" size={22} color={colors.white} />
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
 
-        {/* Tasks */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tareas</Text>
-          {tasksLoading ? (
-            <Spinner />
-          ) : (
-            grouped.map(({ status, tasks: groupTasks }) => (
-              <View key={status} style={styles.group}>
-                <View style={styles.groupHeader}>
-                  <Text style={styles.groupLabel}>{STATUS_LABELS[status]}</Text>
-                  <Text style={styles.groupCount}>{groupTasks.length}</Text>
-                </View>
-                {groupTasks.length === 0 ? (
-                  <Text style={styles.emptyText}>Sin tareas</Text>
-                ) : (
-                  groupTasks.map((task) => (
-                    <TaskItem
-                      key={task.id}
-                      task={task}
-                      onToggle={updateStatus}
-                      onEdit={(t) => setTaskModal({ mode: 'edit', task: t })}
-                      onDelete={handleDeleteTask}
+        {isLoading ? (
+          <SkeletonPlanner />
+        ) : (
+          <>
+            {/* Tasks */}
+            <Animated.View entering={FadeInUp.duration(400).delay(80)} style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Tareas</Text>
+              {grouped.map(({ status, tasks: groupTasks }, gi) => (
+                <Animated.View
+                  key={status}
+                  entering={FadeInUp.duration(350).delay(100 + gi * 60)}
+                  style={styles.group}
+                >
+                  <View style={styles.groupHeader}>
+                    <Text style={[styles.groupLabel, { color: colors.textMuted }]}>
+                      {STATUS_LABELS[status]}
+                    </Text>
+                    <Text style={[styles.groupCount, { color: colors.textMuted, backgroundColor: colors.surface }]}>
+                      {groupTasks.length}
+                    </Text>
+                  </View>
+                  {groupTasks.length === 0 ? (
+                    <Text style={[styles.emptyText, { color: colors.textMuted }]}>Sin tareas</Text>
+                  ) : (
+                    groupTasks.map((task, ti) => (
+                      <Animated.View key={task.id} entering={FadeInUp.duration(300).delay(120 + ti * 40)}>
+                        <TaskItem
+                          task={task}
+                          onToggle={updateStatus}
+                          onEdit={(t) => setTaskModal({ mode: 'edit', task: t })}
+                          onDelete={handleDeleteTask}
+                        />
+                      </Animated.View>
+                    ))
+                  )}
+                </Animated.View>
+              ))}
+            </Animated.View>
+
+            {/* Events */}
+            <Animated.View entering={FadeInUp.duration(400).delay(200)} style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Próximos eventos</Text>
+              {events.length === 0 ? (
+                <Card>
+                  <Text style={[styles.emptyText, { color: colors.textMuted }]}>Sin eventos próximos</Text>
+                </Card>
+              ) : (
+                events.map((event, ei) => (
+                  <Animated.View key={event.id} entering={FadeInUp.duration(300).delay(220 + ei * 40)}>
+                    <EventItem
+                      event={event}
+                      onEdit={(e) => setEventModal({ mode: 'edit', event: e })}
+                      onDelete={handleDeleteEvent}
                     />
-                  ))
-                )}
-              </View>
-            ))
-          )}
-        </View>
-
-        {/* Events */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Próximos eventos</Text>
-          {eventsLoading ? (
-            <Spinner />
-          ) : events.length === 0 ? (
-            <Card>
-              <Text style={styles.emptyText}>Sin eventos próximos</Text>
-            </Card>
-          ) : (
-            events.map((event) => (
-              <EventItem
-                key={event.id}
-                event={event}
-                onEdit={(e) => setEventModal({ mode: 'edit', event: e })}
-                onDelete={handleDeleteEvent}
-              />
-            ))
-          )}
-        </View>
+                  </Animated.View>
+                ))
+              )}
+            </Animated.View>
+          </>
+        )}
       </ScrollView>
 
       {/* Task modal */}
@@ -546,6 +615,7 @@ export default function PlannerScreen() {
               state={eventModal}
               onClose={() => setEventModal(null)}
               onSubmit={handleEventSubmit}
+              onError={(msg) => showToast(msg, 'error')}
             />
           )}
         </View>
@@ -557,7 +627,7 @@ export default function PlannerScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -566,88 +636,75 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
   },
-  title: { fontSize: 28, fontWeight: '800', color: Colors.text },
+  title: { fontSize: 28, fontWeight: '800' },
   headerActions: { flexDirection: 'row', gap: 8 },
   addBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   addBtnOutline: {
-    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.primary,
   },
   section: { paddingHorizontal: 16, paddingBottom: 16, gap: 12 },
-  sectionTitle: { fontSize: 19, fontWeight: '700', color: Colors.text },
+  sectionTitle: { fontSize: 19, fontWeight: '700' },
   group: { gap: 8 },
   groupHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   groupLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   groupCount: {
     fontSize: 12,
-    color: Colors.textMuted,
-    backgroundColor: Colors.surface,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
   },
-  taskCard: { paddingVertical: 10 },
   taskRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   taskContent: { flex: 1, gap: 2 },
-  taskTitle: { fontSize: 15, fontWeight: '500', color: Colors.text },
-  taskTitleDone: { textDecorationLine: 'line-through', color: Colors.textMuted },
-  taskDue: { fontSize: 12, color: Colors.textMuted },
+  taskTitle: { fontSize: 15, fontWeight: '500' },
+  taskTitleDone: { textDecorationLine: 'line-through' },
+  taskDue: { fontSize: 12 },
   eventCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   eventDot: { width: 10, height: 10, borderRadius: 5 },
   eventContent: { flex: 1, gap: 2 },
-  eventTitle: { fontSize: 15, fontWeight: '600', color: Colors.text },
-  eventDate: { fontSize: 12, color: Colors.textMuted },
-  emptyText: { color: Colors.textMuted, fontSize: 14, paddingVertical: 4, paddingLeft: 4 },
+  eventTitle: { fontSize: 15, fontWeight: '600' },
+  eventDate: { fontSize: 12 },
+  emptyText: { fontSize: 14, paddingVertical: 4, paddingLeft: 4 },
   actionBtn: { padding: 4 },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modal: {
-    backgroundColor: Colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
     maxHeight: '90%',
+    gap: 16,
   },
-  modalContent: { gap: 16, paddingBottom: 40 },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: Colors.text },
-  fieldLabel: { fontSize: 14, fontWeight: '500', color: Colors.text },
+  modalContent: {},
+  modalTitle: { fontSize: 20, fontWeight: '800' },
+  fieldLabel: { fontSize: 14, fontWeight: '500' },
   chipRow: { flexDirection: 'row', gap: 10 },
   chip: {
     flex: 1,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: Colors.background,
     alignItems: 'center',
   },
-  chipActive: { backgroundColor: Colors.primary },
-  chipText: { fontSize: 14, fontWeight: '600', color: Colors.textMuted },
-  chipTextActive: { color: Colors.white },
+  chipText: { fontSize: 14, fontWeight: '600' },
   dateInput: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
-    color: Colors.text,
   },
   switchRow: {
     flexDirection: 'row',
@@ -656,7 +713,6 @@ const styles = StyleSheet.create({
   },
   colorRow: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
   colorDot: { width: 28, height: 28, borderRadius: 14 },
-  colorDotSelected: { borderWidth: 3, borderColor: Colors.text },
   modalActions: { flexDirection: 'row', gap: 12 },
   modalBtn: { flex: 1 },
 });

@@ -12,12 +12,53 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAssistantStore } from '../../store/assistant.store';
-import { Spinner } from '../../components/ui/Spinner';
-import { Colors } from '../../constants/colors';
-import type { AIMessage } from '../../types';
+import { MarkdownText } from '../../components/ui/MarkdownText';
+import { TypingDots } from '../../components/ui/TypingDots';
+import { useThemeColors } from '../../constants/colors';
+import type { AIMessage, VaultNote } from '../../types';
 
-function MessageBubble({ message }: { message: AIMessage }) {
+// ─── Attachment Card ──────────────────────────────────────────────────────────
+
+const AttachmentCard = React.memo(function AttachmentCard({ note }: { note: VaultNote }) {
+  const colors = useThemeColors();
+  const isImage = note.mime_type?.startsWith('image/');
+  const icon = isImage ? 'image-outline' : 'document-text-outline';
+
+  const categoryColors: Record<string, string> = {
+    legal: colors.categoryLegal,
+    health: colors.categoryHealth,
+    finance: colors.categoryFinance,
+    personal: colors.categoryPersonal,
+    other: colors.categoryOther,
+  };
+  const categoryColor = categoryColors[note.category ?? 'other'] ?? colors.categoryOther;
+  const sizeKb = note.file_size ? Math.round(note.file_size / 1024) : null;
+
+  return (
+    <View style={[styles.attachmentCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+      <View style={[styles.attachmentIcon, { backgroundColor: categoryColor + '22' }]}>
+        <Ionicons name={icon as any} size={18} color={categoryColor} />
+      </View>
+      <View style={styles.attachmentInfo}>
+        <Text style={[styles.attachmentTitle, { color: colors.text }]} numberOfLines={1}>
+          {note.title}
+        </Text>
+        <Text style={[styles.attachmentMeta, { color: colors.textMuted }]}>
+          {note.category ?? 'other'}
+          {sizeKb ? ` · ${sizeKb} KB` : ''}
+        </Text>
+      </View>
+    </View>
+  );
+});
+
+// ─── Message Bubble ───────────────────────────────────────────────────────────
+
+const MessageBubble = React.memo(function MessageBubble({ message }: { message: AIMessage }) {
+  const colors = useThemeColors();
   const isUser = message.role === 'user';
+  const isEmpty = message.content === '' && message.isStreaming;
+
   return (
     <View
       style={[
@@ -26,31 +67,55 @@ function MessageBubble({ message }: { message: AIMessage }) {
       ]}
     >
       {!isUser && (
-        <View style={styles.avatarIcon}>
-          <Ionicons name="sparkles" size={14} color={Colors.white} />
+        <View style={[styles.avatarIcon, { backgroundColor: colors.primary }]}>
+          <Ionicons name="sparkles" size={14} color={colors.white} />
         </View>
       )}
       <View
         style={[
           styles.bubble,
-          isUser ? styles.bubbleUser : styles.bubbleAssistant,
+          isUser
+            ? { backgroundColor: colors.primary, borderBottomRightRadius: 4 }
+            : {
+                backgroundColor: colors.surface,
+                borderBottomLeftRadius: 4,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.06,
+                shadowRadius: 4,
+                elevation: 1,
+              },
+          isEmpty && styles.bubbleTyping,
         ]}
       >
-        <Text
-          style={[
-            styles.bubbleText,
-            isUser ? styles.bubbleTextUser : styles.bubbleTextAssistant,
-          ]}
-        >
-          {message.content}
-        </Text>
+        {isEmpty ? (
+          <TypingDots />
+        ) : isUser ? (
+          <Text style={[styles.bubbleTextUser, { color: colors.white }]}>{message.content}</Text>
+        ) : (
+          <MarkdownText
+            content={message.content}
+            baseStyle={[styles.bubbleTextAssistant, { color: colors.text }]}
+          />
+        )}
+
+        {message.attachments && message.attachments.length > 0 && (
+          <View style={styles.attachmentList}>
+            {message.attachments.map((note) => (
+              <AttachmentCard key={note.id} note={note} />
+            ))}
+          </View>
+        )}
       </View>
     </View>
   );
-}
+});
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function AssistantScreen() {
-  const { messages, loading, send } = useAssistantStore();
+  const colors = useThemeColors();
+  const { messages, loading, send, clearSession } = useAssistantStore();
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList>(null);
 
@@ -59,20 +124,33 @@ export default function AssistantScreen() {
     if (!trimmed || loading) return;
     setInput('');
     await send(trimmed);
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerIcon}>
-          <Ionicons name="sparkles" size={20} color={Colors.white} />
+        <View style={styles.headerLeft}>
+          <View style={[styles.headerIcon, { backgroundColor: colors.primary }]}>
+            <Ionicons name="sparkles" size={20} color={colors.white} />
+          </View>
+          <View>
+            <Text style={[styles.title, { color: colors.text }]}>AI Assistant</Text>
+            <Text style={[styles.subtitle, { color: colors.textMuted }]}>Powered by LifeVault AI</Text>
+          </View>
         </View>
-        <View>
-          <Text style={styles.title}>AI Assistant</Text>
-          <Text style={styles.subtitle}>Powered by LifeVault AI</Text>
-        </View>
+        <TouchableOpacity
+          onPress={clearSession}
+          style={styles.newSessionBtn}
+          activeOpacity={0.7}
+          disabled={loading}
+        >
+          <Ionicons
+            name="add-circle-outline"
+            size={22}
+            color={loading ? colors.textMuted : colors.primary}
+          />
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
@@ -80,12 +158,11 @@ export default function AssistantScreen() {
         style={styles.keyboardAvoid}
         keyboardVerticalOffset={0}
       >
-        {/* Messages */}
         {messages.length === 0 ? (
           <View style={styles.empty}>
-            <Ionicons name="chatbubbles-outline" size={48} color={Colors.textMuted} />
-            <Text style={styles.emptyTitle}>How can I help you?</Text>
-            <Text style={styles.emptySubtitle}>
+            <Ionicons name="chatbubbles-outline" size={48} color={colors.textMuted} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>How can I help you?</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
               Ask me anything about your vault, tasks, or anything else.
             </Text>
           </View>
@@ -96,6 +173,7 @@ export default function AssistantScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.messageList}
             showsVerticalScrollIndicator={false}
+            removeClippedSubviews
             renderItem={({ item }) => <MessageBubble message={item} />}
             onContentSizeChange={() =>
               listRef.current?.scrollToEnd({ animated: true })
@@ -103,21 +181,14 @@ export default function AssistantScreen() {
           />
         )}
 
-        {loading && (
-          <View style={styles.typingIndicator}>
-            <Spinner size="small" />
-            <Text style={styles.typingText}>Assistant is typing...</Text>
-          </View>
-        )}
-
         {/* Input bar */}
-        <View style={styles.inputBar}>
+        <View style={[styles.inputBar, { backgroundColor: colors.surface }]}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
             value={input}
             onChangeText={setInput}
             placeholder="Message..."
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={colors.textMuted}
             multiline
             maxLength={2000}
             onSubmitEditing={handleSend}
@@ -127,11 +198,12 @@ export default function AssistantScreen() {
             disabled={!input.trim() || loading}
             style={[
               styles.sendButton,
+              { backgroundColor: colors.primary },
               (!input.trim() || loading) && styles.sendButtonDisabled,
             ]}
             activeOpacity={0.8}
           >
-            <Ionicons name="send" size={18} color={Colors.white} />
+            <Ionicons name="send" size={18} color={colors.white} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -139,34 +211,40 @@ export default function AssistantScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   headerIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.text,
   },
   subtitle: {
     fontSize: 12,
-    color: Colors.textMuted,
+  },
+  newSessionBtn: {
+    padding: 6,
   },
   keyboardAvoid: {
     flex: 1,
@@ -181,12 +259,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.text,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 15,
-    color: Colors.textMuted,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -211,7 +287,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -221,39 +296,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  bubbleUser: {
-    backgroundColor: Colors.primary,
-    borderBottomRightRadius: 4,
+  bubbleTyping: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
-  bubbleAssistant: {
-    backgroundColor: Colors.surface,
-    borderBottomLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  bubbleText: {
+  bubbleTextUser: {
     fontSize: 15,
     lineHeight: 22,
   },
-  bubbleTextUser: {
-    color: Colors.white,
-  },
   bubbleTextAssistant: {
-    color: Colors.text,
+    fontSize: 15,
+    lineHeight: 22,
   },
-  typingIndicator: {
+  attachmentList: {
+    marginTop: 8,
+    gap: 6,
+  },
+  attachmentCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    gap: 10,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
   },
-  typingText: {
+  attachmentIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachmentInfo: {
+    flex: 1,
+  },
+  attachmentTitle: {
     fontSize: 13,
-    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+  attachmentMeta: {
+    fontSize: 11,
+    marginTop: 1,
   },
   inputBar: {
     flexDirection: 'row',
@@ -261,7 +345,6 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: Colors.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.06,
@@ -270,19 +353,16 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: Colors.background,
     borderRadius: 22,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 15,
-    color: Colors.text,
     maxHeight: 120,
   },
   sendButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

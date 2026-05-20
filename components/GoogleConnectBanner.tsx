@@ -5,13 +5,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { GoogleSignin, isSuccessResponse } from '@react-native-google-signin/google-signin';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
+import { useThemeColors } from '../constants/colors';
 import { markConnected, clearTokens } from '../lib/google-auth';
 import { importAllFromGoogle } from '../lib/google-sync';
+import { useToast } from '../lib/toast';
 
 interface Props {
   userId: string;
@@ -20,47 +20,34 @@ interface Props {
 }
 
 export function GoogleConnectBanner({ userId, connected, onConnectionChange }: Props) {
+  const colors = useThemeColors();
+  const { show: showToast } = useToast();
   const [syncing, setSyncing] = useState(false);
 
   const handleConnect = async () => {
     setSyncing(true);
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      // Cerrar sesión previa para forzar pantalla de consentimiento con Tasks/Calendar.
-      // No afecta a la sesión de Supabase — solo limpia la sesión de Google Play Services.
       try { await GoogleSignin.signOut(); } catch {}
       const signInResult = await GoogleSignin.signIn();
-      if (!isSuccessResponse(signInResult)) {
-        throw new Error('Sign-in cancelado');
-      }
-      // Pedir explícitamente los scopes de Tasks y Calendar.
-      // addScopes muestra el consent screen adicional si aún no se han concedido.
+      if (!isSuccessResponse(signInResult)) throw new Error('Sign-in cancelado');
       await GoogleSignin.addScopes({
         scopes: [
           'https://www.googleapis.com/auth/tasks',
           'https://www.googleapis.com/auth/calendar',
         ],
       });
-
-
       await markConnected();
       const result = await importAllFromGoogle(userId);
-
       if (result.errors.length > 0) {
-        Alert.alert(
-          'Errores de sync',
-          result.errors.slice(0, 3).join('\n'),
-        );
+        showToast(`Sync con errores: ${result.errors[0]}`, 'error');
       } else {
-        Alert.alert(
-          'Sync completado',
-          `Tareas: ${result.tasksFetched} recibidas → ${result.tasksUpserted} guardadas\nEventos: ${result.eventsFetched} recibidos → ${result.eventsUpserted} guardados`,
-        );
+        showToast(`Sync completado — ${result.tasksUpserted} tareas, ${result.eventsUpserted} eventos`, 'success');
       }
-
       onConnectionChange(true);
     } catch (e) {
-      console.error('[GoogleConnect]', e);
+      console.error('[GoogleConnectBanner]', e);
+      showToast('No se pudo conectar con Google', 'error');
     } finally {
       setSyncing(false);
     }
@@ -69,24 +56,25 @@ export function GoogleConnectBanner({ userId, connected, onConnectionChange }: P
   const handleDisconnect = async () => {
     await clearTokens();
     onConnectionChange(false);
+    showToast('Google desconectado', 'info');
   };
 
   if (syncing) {
     return (
-      <View style={styles.banner}>
-        <ActivityIndicator size="small" color={Colors.primary} />
-        <Text style={styles.syncText}>Importando desde Google...</Text>
+      <View style={[styles.banner, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <ActivityIndicator size="small" color={colors.primary} />
+        <Text style={[styles.syncText, { color: colors.textMuted }]}>Importando desde Google...</Text>
       </View>
     );
   }
 
   if (connected) {
     return (
-      <View style={[styles.banner, styles.bannerConnected]}>
-        <Ionicons name="checkmark-circle" size={15} color={Colors.success} />
-        <Text style={styles.connectedText}>Sincronizado con Google</Text>
+      <View style={[styles.banner, styles.bannerConnected, { backgroundColor: '#f0fdf4', borderColor: colors.success + '44' }]}>
+        <Ionicons name="checkmark-circle" size={15} color={colors.success} />
+        <Text style={[styles.connectedText, { color: colors.success }]}>Sincronizado con Google</Text>
         <TouchableOpacity onPress={handleDisconnect}>
-          <Text style={styles.disconnectText}>Desconectar</Text>
+          <Text style={[styles.disconnectText, { color: colors.textMuted }]}>Desconectar</Text>
         </TouchableOpacity>
       </View>
     );
@@ -94,13 +82,13 @@ export function GoogleConnectBanner({ userId, connected, onConnectionChange }: P
 
   return (
     <TouchableOpacity
-      style={styles.banner}
+      style={[styles.banner, { backgroundColor: colors.surface, borderColor: colors.border }]}
       onPress={handleConnect}
       activeOpacity={0.7}
     >
-      <Ionicons name="logo-google" size={15} color={Colors.primary} />
-      <Text style={styles.connectText}>Conectar Google Tasks & Calendar</Text>
-      <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
+      <Ionicons name="logo-google" size={15} color={colors.primary} />
+      <Text style={[styles.connectText, { color: colors.primary }]}>Conectar Google Tasks & Calendar</Text>
+      <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
     </TouchableOpacity>
   );
 }
@@ -114,35 +102,26 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: Colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
-  bannerConnected: {
-    borderColor: Colors.success + '44',
-    backgroundColor: '#f0fdf4',
-  },
+  bannerConnected: {},
   connectText: {
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.primary,
   },
   syncText: {
     flex: 1,
     fontSize: 13,
-    color: Colors.textMuted,
   },
   connectedText: {
     flex: 1,
     fontSize: 13,
     fontWeight: '500',
-    color: Colors.success,
   },
   disconnectText: {
     fontSize: 12,
-    color: Colors.textMuted,
     textDecorationLine: 'underline',
   },
 });

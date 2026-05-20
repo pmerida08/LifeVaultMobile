@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ViewStyle, StyleSheet } from 'react-native';
-import { Colors } from '../../constants/colors';
+import { useThemeColors } from '../../constants/colors';
 
 interface CardProps {
   children: React.ReactNode;
@@ -9,11 +9,13 @@ interface CardProps {
 }
 
 export function Card({ children, style, elevated = false }: CardProps) {
+  const colors = useThemeColors();
   return (
     <View
       style={[
         styles.card,
-        elevated && styles.elevated,
+        { backgroundColor: elevated ? colors.surfaceElevated : colors.surface },
+        elevated && styles.elevatedShadow,
         style,
       ]}
     >
@@ -24,7 +26,6 @@ export function Card({ children, style, elevated = false }: CardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.surface,
     borderRadius: 16,
     padding: 16,
     shadowColor: '#1A1035',
@@ -33,8 +34,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  elevated: {
-    backgroundColor: Colors.surfaceElevated,
+  elevatedShadow: {
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 4,

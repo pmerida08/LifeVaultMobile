@@ -13,7 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
+import { useThemeColors } from '../../constants/colors';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -24,40 +24,44 @@ const AnimatedView = Animated.createAnimatedComponent(View);
 
 export const Input = forwardRef<TextInput, InputProps>(
   ({ label, error, style, secureTextEntry, ...props }, ref) => {
-    const [focused, setFocused] = useState(false);
+    const colors = useThemeColors();
     const [hidden, setHidden] = useState(secureTextEntry ?? false);
 
     const borderAnim = useSharedValue(0);
     const animStyle = useAnimatedStyle(() => ({
       borderWidth: 1.5,
       borderColor: error
-        ? Colors.danger
+        ? colors.danger
         : withTiming(
-            borderAnim.value === 1 ? Colors.primary : Colors.border,
+            borderAnim.value === 1 ? colors.primary : colors.border,
             { duration: 200 }
           ),
     }));
 
     const handleFocus = () => {
-      setFocused(true);
       borderAnim.value = 1;
       props.onFocus?.(null as any);
     };
 
     const handleBlur = () => {
-      setFocused(false);
       borderAnim.value = 0;
       props.onBlur?.(null as any);
     };
 
     return (
       <View style={styles.wrapper}>
-        {label ? <Text style={styles.label}>{label}</Text> : null}
-        <AnimatedView style={[styles.inputContainer, animStyle]}>
+        {label ? <Text style={[styles.label, { color: colors.text }]}>{label}</Text> : null}
+        <AnimatedView
+          style={[
+            styles.inputContainer,
+            { backgroundColor: colors.surface },
+            animStyle,
+          ]}
+        >
           <TextInput
             ref={ref}
-            style={[styles.input, style]}
-            placeholderTextColor={Colors.textMuted}
+            style={[styles.input, { color: colors.text }, style]}
+            placeholderTextColor={colors.textMuted}
             secureTextEntry={hidden}
             onFocus={handleFocus}
             onBlur={handleBlur}
@@ -73,12 +77,12 @@ export const Input = forwardRef<TextInput, InputProps>(
               <Ionicons
                 name={hidden ? 'eye-outline' : 'eye-off-outline'}
                 size={20}
-                color={Colors.textMuted}
+                color={colors.textMuted}
               />
             </Pressable>
           )}
         </AnimatedView>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
       </View>
     );
   }
@@ -93,14 +97,12 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.text,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
     borderRadius: 12,
-    shadowColor: Colors.text,
+    shadowColor: '#1A1035',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
@@ -111,7 +113,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
-    color: Colors.text,
     minHeight: 44,
   },
   eyeButton: {
@@ -120,6 +121,5 @@ const styles = StyleSheet.create({
   },
   error: {
     fontSize: 12,
-    color: Colors.danger,
   },
 });

@@ -6,7 +6,6 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
-  Alert,
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +14,8 @@ import { getSignedUrl, extractStoragePath } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Badge } from '../ui/Badge';
-import { Colors } from '../../constants/colors';
+import { useThemeColors } from '../../constants/colors';
+import { useToast } from '../../lib/toast';
 import type { VaultNote } from '../../types';
 
 type Category = NonNullable<VaultNote['category']>;
@@ -55,6 +55,8 @@ interface DetailModalProps {
 }
 
 export function DetailModal({ note, onClose }: DetailModalProps) {
+  const colors = useThemeColors();
+  const { show: showToast } = useToast();
   const { updateNote, deleteNote } = useDocumentsStore();
 
   const [content, setContent] = useState('');
@@ -78,8 +80,9 @@ export function DetailModal({ note, onClose }: DetailModalProps) {
     try {
       await updateNote(note.id, { content, category });
       setDirty(false);
+      showToast('Cambios guardados', 'success');
     } catch {
-      Alert.alert('Error', 'No se pudo guardar. Inténtalo de nuevo.');
+      showToast('No se pudo guardar. Inténtalo de nuevo.', 'error');
     } finally {
       setSaving(false);
     }
@@ -88,7 +91,7 @@ export function DetailModal({ note, onClose }: DetailModalProps) {
   const handleDownload = async () => {
     const storagePath = extractStoragePath(note.file_url);
     if (!storagePath) {
-      Alert.alert('Sin archivo', 'Este documento no tiene archivo adjunto.');
+      showToast('Este documento no tiene archivo adjunto.', 'info');
       return;
     }
     setDownloading(true);
@@ -96,32 +99,20 @@ export function DetailModal({ note, onClose }: DetailModalProps) {
       const url = await getSignedUrl(storagePath);
       await Linking.openURL(url);
     } catch {
-      Alert.alert('Error', 'No se pudo obtener el enlace de descarga.');
+      showToast('No se pudo obtener el enlace de descarga.', 'error');
     } finally {
       setDownloading(false);
     }
   };
 
-  const handleDelete = () => {
-    Alert.alert(
-      'Eliminar documento',
-      `¿Seguro que quieres eliminar "${note.title}"? Esta acción no se puede deshacer.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteNote(note.id, note.file_url);
-              onClose();
-            } catch {
-              Alert.alert('Error', 'No se pudo eliminar el documento.');
-            }
-          },
-        },
-      ]
-    );
+  const handleDelete = async () => {
+    try {
+      await deleteNote(note.id, note.file_url);
+      showToast('Documento eliminado', 'success');
+      onClose();
+    } catch {
+      showToast('No se pudo eliminar el documento.', 'error');
+    }
   };
 
   return (
@@ -131,38 +122,38 @@ export function DetailModal({ note, onClose }: DetailModalProps) {
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <View style={styles.headerLeft}>
             {note.category && (
               <Badge label={note.category} variant={CATEGORY_VARIANTS[note.category] ?? 'muted'} />
             )}
           </View>
-          <Pressable onPress={onClose} accessibilityLabel="Cerrar" style={styles.closeBtn}>
-            <Ionicons name="close" size={22} color={Colors.textMuted} />
+          <Pressable onPress={onClose} accessibilityLabel="Cerrar" style={[styles.closeBtn, { backgroundColor: colors.surface }]}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
           </Pressable>
         </View>
 
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           {/* Título y metadatos */}
           <View style={styles.titleBlock}>
-            <Text style={styles.title}>{note.title}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{note.title}</Text>
             <View style={styles.meta}>
               <View style={styles.metaItem}>
-                <Ionicons name="calendar-outline" size={13} color={Colors.textMuted} />
-                <Text style={styles.metaText}>{formatDate(note.created_at)}</Text>
+                <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>{formatDate(note.created_at)}</Text>
               </View>
               {!!note.file_size && (
                 <View style={styles.metaItem}>
-                  <Ionicons name="document-outline" size={13} color={Colors.textMuted} />
-                  <Text style={styles.metaText}>{formatBytes(note.file_size)}</Text>
+                  <Ionicons name="document-outline" size={13} color={colors.textMuted} />
+                  <Text style={[styles.metaText, { color: colors.textMuted }]}>{formatBytes(note.file_size)}</Text>
                 </View>
               )}
               {!!note.file_name && (
                 <View style={styles.metaItem}>
-                  <Ionicons name="attach-outline" size={13} color={Colors.textMuted} />
-                  <Text style={styles.metaText} numberOfLines={1}>{note.file_name}</Text>
+                  <Ionicons name="attach-outline" size={13} color={colors.textMuted} />
+                  <Text style={[styles.metaText, { color: colors.textMuted }]} numberOfLines={1}>{note.file_name}</Text>
                 </View>
               )}
             </View>
@@ -170,17 +161,24 @@ export function DetailModal({ note, onClose }: DetailModalProps) {
 
           {/* Categoría */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Categoría</Text>
+            <Text style={[styles.sectionLabel, { color: colors.text }]}>Categoría</Text>
             <View style={styles.chips}>
               {CATEGORIES.map((cat) => (
                 <Pressable
                   key={cat.value}
                   onPress={() => { setCategory(cat.value); setDirty(true); }}
-                  style={[styles.chip, category === cat.value && styles.chipActive]}
+                  style={[
+                    styles.chip,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                    category === cat.value && { backgroundColor: colors.primary, borderColor: colors.primary },
+                  ]}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: category === cat.value }}
                 >
-                  <Text style={[styles.chipText, category === cat.value && styles.chipTextActive]}>
+                  <Text style={[
+                    styles.chipText,
+                    { color: category === cat.value ? colors.white : colors.textMuted },
+                  ]}>
                     {cat.label}
                   </Text>
                 </Pressable>
@@ -220,7 +218,7 @@ export function DetailModal({ note, onClose }: DetailModalProps) {
 
         {/* Footer guardar */}
         {dirty && (
-          <View style={styles.footer}>
+          <View style={[styles.footer, { borderTopColor: colors.border }]}>
             <Button
               label={saving ? 'Guardando…' : 'Guardar cambios'}
               onPress={handleSave}
@@ -237,7 +235,6 @@ export function DetailModal({ note, onClose }: DetailModalProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -247,7 +244,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -257,7 +253,6 @@ const styles = StyleSheet.create({
   closeBtn: {
     padding: 6,
     borderRadius: 20,
-    backgroundColor: Colors.surface,
   },
   body: {
     padding: 20,
@@ -270,7 +265,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: Colors.text,
     lineHeight: 28,
   },
   meta: {
@@ -285,7 +279,6 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
-    color: Colors.textMuted,
   },
   section: {
     gap: 8,
@@ -293,7 +286,6 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.text,
   },
   chips: {
     flexDirection: 'row',
@@ -304,21 +296,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  chipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
   },
   chipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.textMuted,
-  },
-  chipTextActive: {
-    color: Colors.white,
   },
   actions: {
     gap: 10,
@@ -327,6 +309,5 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 36,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
   },
 });

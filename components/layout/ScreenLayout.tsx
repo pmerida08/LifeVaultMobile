@@ -7,7 +7,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '../../constants/colors';
+import { useThemeColors } from '../../constants/colors';
 
 interface ScreenLayoutProps {
   children: React.ReactNode;
@@ -26,9 +26,11 @@ export function ScreenLayout({
   style,
   contentStyle,
 }: ScreenLayoutProps) {
+  const colors = useThemeColors();
+
   if (scrollable) {
     return (
-      <SafeAreaView style={[styles.safe, style]}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }, style]}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={[styles.content, contentStyle]}
@@ -38,7 +40,8 @@ export function ScreenLayout({
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                tintColor={Colors.primary}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
               />
             ) : undefined
           }
@@ -50,7 +53,7 @@ export function ScreenLayout({
   }
 
   return (
-    <SafeAreaView style={[styles.safe, style]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }, style]}>
       <View style={[styles.content, contentStyle]}>{children}</View>
     </SafeAreaView>
   );
@@ -59,7 +62,6 @@ export function ScreenLayout({
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   scroll: {
     flex: 1,

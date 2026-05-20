@@ -6,19 +6,18 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { Colors } from '../../constants/colors';
+import { useThemeColors } from '../../constants/colors';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 function TabIcon({ name, focused }: { name: IoniconName; focused: boolean }) {
+  const colors = useThemeColors();
   const scale = useSharedValue(1);
 
   useEffect(() => {
-    if (focused) {
-      scale.value = withSpring(1.18, { damping: 8, stiffness: 200 });
-    } else {
-      scale.value = withSpring(1, { damping: 10, stiffness: 200 });
-    }
+    scale.value = focused
+      ? withSpring(1.18, { damping: 8, stiffness: 200 })
+      : withSpring(1, { damping: 10, stiffness: 200 });
   }, [focused]);
 
   const animStyle = useAnimatedStyle(() => ({
@@ -30,7 +29,7 @@ function TabIcon({ name, focused }: { name: IoniconName; focused: boolean }) {
       <Ionicons
         name={focused ? name : (`${name}-outline` as IoniconName)}
         size={24}
-        color={focused ? Colors.primary : Colors.textMuted}
+        color={focused ? colors.primary : colors.textMuted}
         accessibilityElementsHidden
       />
     </Animated.View>
@@ -38,15 +37,18 @@ function TabIcon({ name, focused }: { name: IoniconName; focused: boolean }) {
 }
 
 export default function TabsLayout() {
+  const colors = useThemeColors();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors.surface,
+          backgroundColor: colors.surface,
           borderTopWidth: 0,
+          borderTopColor: colors.border,
           elevation: 16,
-          shadowColor: Colors.primary,
+          shadowColor: colors.primary,
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.10,
           shadowRadius: 16,
@@ -54,8 +56,8 @@ export default function TabsLayout() {
           paddingBottom: 10,
           paddingTop: 6,
         },
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',

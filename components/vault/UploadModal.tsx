@@ -6,7 +6,6 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
-  Alert,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -15,7 +14,8 @@ import { useAuthStore } from '../../store/auth.store';
 import { useDocumentsStore } from '../../store/documents.store';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { Colors } from '../../constants/colors';
+import { useThemeColors } from '../../constants/colors';
+import { useToast } from '../../lib/toast';
 import type { VaultNote } from '../../types';
 
 type Category = NonNullable<VaultNote['category']>;
@@ -40,6 +40,8 @@ function formatBytes(bytes: number): string {
 }
 
 export function UploadModal({ visible, onClose }: UploadModalProps) {
+  const colors = useThemeColors();
+  const { show: showToast } = useToast();
   const { user } = useAuthStore();
   const { upload, uploading } = useDocumentsStore();
 
@@ -55,18 +57,14 @@ export function UploadModal({ visible, onClose }: UploadModalProps) {
     });
     if (result.canceled) return;
     const asset = result.assets[0];
-
-    // Copiar a documentDirectory — más persistente que la caché del picker
     const stablePath = `${FileSystem.documentDirectory}lv_upload_${Date.now()}_${asset.name}`;
     await FileSystem.copyAsync({ from: asset.uri, to: stablePath });
-
     setFile({ ...asset, uri: stablePath });
     if (!title) setTitle(asset.name.replace(/\.[^.]+$/, ''));
   };
 
   const handleUpload = async () => {
     if (!file || !title.trim() || !user) return;
-
     try {
       await upload(
         user.id,
@@ -76,13 +74,12 @@ export function UploadModal({ visible, onClose }: UploadModalProps) {
         file.size ?? 0,
         { title: title.trim(), category, notes: notes.trim() || undefined }
       );
-      // Limpiar archivo temporal tras upload exitoso
       FileSystem.deleteAsync(file.uri, { idempotent: true }).catch(() => {});
+      showToast('Documento subido', 'success');
       handleClose();
     } catch (e: any) {
-      // Limpiar también en caso de error
       FileSystem.deleteAsync(file.uri, { idempotent: true }).catch(() => {});
-      Alert.alert('Error al subir', e?.message ?? 'Error desconocido');
+      showToast(e?.message ?? 'Error al subir el documento', 'error');
     }
   };
 
@@ -101,32 +98,39 @@ export function UploadModal({ visible, onClose }: UploadModalProps) {
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Añadir documento</Text>
-          <Pressable onPress={handleClose} accessibilityLabel="Cerrar" style={styles.closeBtn}>
-            <Ionicons name="close" size={22} color={Colors.textMuted} />
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Añadir documento</Text>
+          <Pressable onPress={handleClose} accessibilityLabel="Cerrar" style={[styles.closeBtn, { backgroundColor: colors.surface }]}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
           </Pressable>
         </View>
 
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           {/* File picker */}
-          <Pressable onPress={handlePickFile} style={[styles.filePicker, file && styles.filePickerFilled]}>
+          <Pressable
+            onPress={handlePickFile}
+            style={[
+              styles.filePicker,
+              { borderColor: colors.border, backgroundColor: colors.surface },
+              file && { borderStyle: 'solid', borderColor: colors.primary, backgroundColor: colors.primarySurface },
+            ]}
+          >
             {file ? (
               <View style={styles.fileInfo}>
-                <Ionicons name="document-attach-outline" size={24} color={Colors.primary} />
+                <Ionicons name="document-attach-outline" size={24} color={colors.primary} />
                 <View style={styles.fileText}>
-                  <Text style={styles.fileName} numberOfLines={1}>{file.name}</Text>
-                  <Text style={styles.fileSize}>{formatBytes(file.size ?? 0)}</Text>
+                  <Text style={[styles.fileName, { color: colors.text }]} numberOfLines={1}>{file.name}</Text>
+                  <Text style={[styles.fileSize, { color: colors.textMuted }]}>{formatBytes(file.size ?? 0)}</Text>
                 </View>
-                <Ionicons name="pencil-outline" size={18} color={Colors.textMuted} />
+                <Ionicons name="pencil-outline" size={18} color={colors.textMuted} />
               </View>
             ) : (
               <View style={styles.fileEmpty}>
-                <Ionicons name="cloud-upload-outline" size={32} color={Colors.textMuted} />
-                <Text style={styles.fileEmptyText}>Seleccionar archivo</Text>
-                <Text style={styles.fileEmptyHint}>PDF, imagen, Word, Excel…</Text>
+                <Ionicons name="cloud-upload-outline" size={32} color={colors.textMuted} />
+                <Text style={[styles.fileEmptyText, { color: colors.textMuted }]}>Seleccionar archivo</Text>
+                <Text style={[styles.fileEmptyHint, { color: colors.border }]}>PDF, imagen, Word, Excel…</Text>
               </View>
             )}
           </Pressable>
@@ -141,17 +145,24 @@ export function UploadModal({ visible, onClose }: UploadModalProps) {
 
           {/* Categoría */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Categoría</Text>
+            <Text style={[styles.sectionLabel, { color: colors.text }]}>Categoría</Text>
             <View style={styles.chips}>
               {CATEGORIES.map((cat) => (
                 <Pressable
                   key={cat.value}
                   onPress={() => setCategory(cat.value)}
-                  style={[styles.chip, category === cat.value && styles.chipActive]}
+                  style={[
+                    styles.chip,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                    category === cat.value && { backgroundColor: colors.primary, borderColor: colors.primary },
+                  ]}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: category === cat.value }}
                 >
-                  <Text style={[styles.chipText, category === cat.value && styles.chipTextActive]}>
+                  <Text style={[
+                    styles.chipText,
+                    { color: category === cat.value ? colors.white : colors.textMuted },
+                  ]}>
                     {cat.label}
                   </Text>
                 </Pressable>
@@ -171,7 +182,7 @@ export function UploadModal({ visible, onClose }: UploadModalProps) {
         </ScrollView>
 
         {/* Footer */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <Button
             label={uploading ? 'Subiendo…' : 'Subir documento'}
             onPress={handleUpload}
@@ -188,7 +199,6 @@ export function UploadModal({ visible, onClose }: UploadModalProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -198,17 +208,14 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.text,
   },
   closeBtn: {
     padding: 6,
     borderRadius: 20,
-    backgroundColor: Colors.surface,
   },
   body: {
     padding: 20,
@@ -216,19 +223,12 @@ const styles = StyleSheet.create({
   },
   filePicker: {
     borderWidth: 1.5,
-    borderColor: Colors.border,
     borderStyle: 'dashed',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.surface,
     minHeight: 100,
-  },
-  filePickerFilled: {
-    borderStyle: 'solid',
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primarySurface,
   },
   fileEmpty: {
     alignItems: 'center',
@@ -237,11 +237,9 @@ const styles = StyleSheet.create({
   fileEmptyText: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.textMuted,
   },
   fileEmptyHint: {
     fontSize: 12,
-    color: Colors.border,
   },
   fileInfo: {
     flexDirection: 'row',
@@ -256,11 +254,9 @@ const styles = StyleSheet.create({
   fileName: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.text,
   },
   fileSize: {
     fontSize: 12,
-    color: Colors.textMuted,
   },
   section: {
     gap: 8,
@@ -268,7 +264,6 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.text,
   },
   chips: {
     flexDirection: 'row',
@@ -279,26 +274,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  chipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
   },
   chipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.textMuted,
-  },
-  chipTextActive: {
-    color: Colors.white,
   },
   footer: {
     padding: 20,
     paddingBottom: 36,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
   },
 });

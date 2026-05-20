@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { TouchableOpacity, ActivityIndicator, StyleSheet, Alert } from 'react-native';
+import { TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { GoogleSignin, isSuccessResponse } from '@react-native-google-signin/google-signin';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
+import { useThemeColors } from '../constants/colors';
 import { markConnected, clearTokens } from '../lib/google-auth';
 import { importAllFromGoogle } from '../lib/google-sync';
+import { useToast } from '../lib/toast';
 
 interface Props {
   userId: string;
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export function GoogleConnectButton({ userId, connected, onConnectionChange }: Props) {
+  const colors = useThemeColors();
+  const { show: showToast } = useToast();
   const [syncing, setSyncing] = useState(false);
 
   const handleConnect = async () => {
@@ -31,30 +34,26 @@ export function GoogleConnectButton({ userId, connected, onConnectionChange }: P
       await markConnected();
       await importAllFromGoogle(userId);
       onConnectionChange(true);
+      showToast('Google conectado', 'success');
     } catch (e) {
       console.error('[GoogleConnect]', e);
+      showToast('No se pudo conectar con Google', 'error');
     } finally {
       setSyncing(false);
     }
   };
 
-  const handleDisconnect = () => {
-    Alert.alert('Desconectar Google', '¿Desconectar Tasks y Calendar?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Desconectar', style: 'destructive', onPress: async () => {
-          await clearTokens();
-          onConnectionChange(false);
-        },
-      },
-    ]);
+  const handleDisconnect = async () => {
+    await clearTokens();
+    onConnectionChange(false);
+    showToast('Google desconectado', 'info');
   };
 
   if (syncing) {
     return (
       <ActivityIndicator
         size="small"
-        color={Colors.primary}
+        color={colors.primary}
         style={styles.btn}
       />
     );
@@ -62,14 +61,18 @@ export function GoogleConnectButton({ userId, connected, onConnectionChange }: P
 
   return (
     <TouchableOpacity
-      style={[styles.btn, connected && styles.btnConnected]}
+      style={[
+        styles.btn,
+        { borderColor: connected ? colors.success + '88' : colors.border, backgroundColor: colors.surface },
+        connected && styles.btnConnected,
+      ]}
       onPress={connected ? handleDisconnect : handleConnect}
       activeOpacity={0.7}
     >
       <Ionicons
         name="logo-google"
         size={17}
-        color={connected ? Colors.success : Colors.textMuted}
+        color={connected ? colors.success : colors.textMuted}
       />
     </TouchableOpacity>
   );
@@ -81,13 +84,10 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   btnConnected: {
-    borderColor: Colors.success + '88',
     backgroundColor: '#f0fdf4',
   },
 });

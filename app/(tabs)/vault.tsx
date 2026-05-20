@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   TextInput,
+  RefreshControl,
 } from 'react-native';
 import Animated, {
   FadeInDown,
@@ -21,10 +22,10 @@ import { useAuthStore } from '../../store/auth.store';
 import { useDocumentsStore } from '../../store/documents.store';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
-import { Spinner } from '../../components/ui/Spinner';
+import { SkeletonVault } from '../../components/ui/Skeleton';
 import { UploadModal } from '../../components/vault/UploadModal';
 import { DetailModal } from '../../components/vault/DetailModal';
-import { Colors } from '../../constants/colors';
+import { useThemeColors } from '../../constants/colors';
 import type { VaultNote } from '../../types';
 
 type Category = VaultNote['category'];
@@ -54,75 +55,70 @@ const CATEGORY_VARIANTS: Record<string, 'primary' | 'success' | 'warning' | 'dan
   other: 'muted',
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
-  legal: Colors.danger,
-  health: Colors.success,
-  finance: Colors.warning,
-  personal: Colors.primary,
-  other: Colors.textMuted,
-};
-
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('es-ES', {
     month: 'short', day: 'numeric', year: 'numeric',
   });
 }
 
-function NoteCard({
-  note,
-  index,
-  onPress,
-}: {
+interface NoteCardProps {
   note: VaultNote;
   index: number;
   onPress: () => void;
-}) {
+}
+
+const NoteCard = React.memo(function NoteCard({ note, index, onPress }: NoteCardProps) {
+  const colors = useThemeColors();
   const icon = CATEGORY_ICONS[note.category ?? 'other'] ?? 'document-outline';
   const variant = CATEGORY_VARIANTS[note.category ?? 'other'] ?? 'muted';
-  const iconColor = CATEGORY_COLORS[note.category ?? 'other'] ?? Colors.textMuted;
+
+  const categoryColorMap: Record<string, string> = {
+    legal: colors.categoryLegal,
+    health: colors.categoryHealth,
+    finance: colors.categoryFinance,
+    personal: colors.categoryPersonal,
+    other: colors.categoryOther,
+  };
+  const iconColor = categoryColorMap[note.category ?? 'other'] ?? colors.textMuted;
 
   return (
-    <Animated.View entering={FadeInUp.duration(400).delay(index * 60)}>
+    <Animated.View entering={FadeInUp.duration(400).delay(index * 50)}>
       <Pressable
         onPress={onPress}
-        android_ripple={{ color: Colors.primarySurface }}
+        android_ripple={{ color: colors.primarySurface }}
         accessibilityRole="button"
         accessibilityLabel={note.title}
       >
-        <Card style={styles.noteCard}>
+        <Card>
           <View style={styles.noteRow}>
             <View style={[styles.noteIcon, { backgroundColor: `${iconColor}18` }]}>
               <Ionicons name={icon} size={18} color={iconColor} accessibilityElementsHidden />
             </View>
             <View style={styles.noteContent}>
-              <Text style={styles.noteTitle} numberOfLines={1}>{note.title}</Text>
-              <Text style={styles.noteDate}>{formatDate(note.created_at)}</Text>
+              <Text style={[styles.noteTitle, { color: colors.text }]} numberOfLines={1}>{note.title}</Text>
+              <Text style={[styles.noteDate, { color: colors.textMuted }]}>{formatDate(note.created_at)}</Text>
             </View>
             {note.is_pinned && (
-              <Ionicons
-                name="bookmark"
-                size={16}
-                color={Colors.accent}
-                accessibilityLabel="Documento fijado"
-              />
+              <Ionicons name="bookmark" size={16} color={colors.accent} accessibilityLabel="Documento fijado" />
             )}
-            <Ionicons name="chevron-forward" size={16} color={Colors.border} />
+            <Ionicons name="chevron-forward" size={16} color={colors.border} />
           </View>
           <View style={styles.noteMeta}>
             {!!note.category && <Badge label={note.category} variant={variant} />}
             {!!note.file_name && (
-              <Text style={styles.fileName} numberOfLines={1}>{note.file_name}</Text>
+              <Text style={[styles.fileName, { color: colors.textMuted }]} numberOfLines={1}>{note.file_name}</Text>
             )}
           </View>
         </Card>
       </Pressable>
     </Animated.View>
   );
-}
+});
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function FAB({ onPress }: { onPress: () => void }) {
+  const colors = useThemeColors();
   const scale = useSharedValue(1);
   const fabStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -135,42 +131,57 @@ function FAB({ onPress }: { onPress: () => void }) {
       onPressOut={() => { scale.value = withSpring(1, { damping: 10, stiffness: 200 }); }}
       accessibilityRole="button"
       accessibilityLabel="Añadir documento"
-      style={[styles.fab, fabStyle]}
+      style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }, fabStyle]}
     >
-      <Ionicons name="add" size={28} color={Colors.white} accessibilityElementsHidden />
+      <Ionicons name="add" size={28} color={colors.white} accessibilityElementsHidden />
     </AnimatedPressable>
   );
 }
 
 export default function VaultScreen() {
+  const colors = useThemeColors();
   const { user } = useAuthStore();
   const { loading, setCategory, selectedCategory, filteredNotes, load } = useDocumentsStore();
 
   const [search, setSearch] = useState('');
   const [uploadVisible, setUploadVisible] = useState(false);
   const [selectedNote, setSelectedNote] = useState<VaultNote | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
-    if (user) load(user.id);
+    if (user) {
+      load(user.id).finally(() => setInitialLoad(false));
+    }
+  }, [user]);
+
+  const onRefresh = useCallback(async () => {
+    if (!user) return;
+    setRefreshing(true);
+    await load(user.id);
+    setRefreshing(false);
   }, [user]);
 
   const notes = filteredNotes(search);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
       <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
-        <Text style={styles.title}>Vault</Text>
-        <Text style={styles.subtitle}>{notes.length} documentos</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Vault</Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>{notes.length} documentos</Text>
       </Animated.View>
 
       {/* Búsqueda */}
-      <Animated.View entering={FadeInDown.duration(400).delay(60)} style={styles.searchWrapper}>
-        <Ionicons name="search-outline" size={17} color={Colors.textMuted} style={styles.searchIcon} />
+      <Animated.View
+        entering={FadeInDown.duration(400).delay(60)}
+        style={[styles.searchWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      >
+        <Ionicons name="search-outline" size={17} color={colors.textMuted} style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.text }]}
           placeholder="Buscar documentos…"
-          placeholderTextColor={Colors.textMuted}
+          placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={setSearch}
           returnKeyType="search"
@@ -195,9 +206,15 @@ export default function VaultScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Filtrar por ${item.label}`}
                 accessibilityState={{ selected: active }}
-                style={[styles.filterChip, active && styles.filterChipActive]}
+                style={[
+                  styles.filterChip,
+                  {
+                    backgroundColor: active ? colors.primary : colors.surface,
+                    borderColor: active ? colors.primary : colors.border,
+                  },
+                ]}
               >
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                <Text style={[styles.filterChipText, { color: active ? colors.white : colors.textMuted }]}>
                   {item.label}
                 </Text>
               </Pressable>
@@ -207,21 +224,30 @@ export default function VaultScreen() {
       </Animated.View>
 
       {/* Notes list */}
-      {loading ? (
-        <Spinner fullscreen />
+      {initialLoad && loading ? (
+        <SkeletonVault />
       ) : (
         <FlatList
           data={notes}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
           ListEmptyComponent={
             <Animated.View entering={FadeInUp.duration(400)} style={styles.empty}>
-              <Ionicons name="folder-open-outline" size={52} color={Colors.border} accessibilityElementsHidden />
-              <Text style={styles.emptyTitle}>
+              <Ionicons name="folder-open-outline" size={52} color={colors.border} accessibilityElementsHidden />
+              <Text style={[styles.emptyTitle, { color: colors.textMuted }]}>
                 {search ? 'Sin resultados' : 'Sin documentos'}
               </Text>
-              <Text style={styles.emptySubtitle}>
+              <Text style={[styles.emptySubtitle, { color: colors.border }]}>
                 {search ? `No hay documentos con "${search}"` : 'Toca + para añadir el primero'}
               </Text>
             </Animated.View>
@@ -254,7 +280,6 @@ export default function VaultScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   header: {
     paddingHorizontal: 16,
@@ -265,11 +290,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: Colors.text,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.textMuted,
   },
   searchWrapper: {
     flexDirection: 'row',
@@ -277,10 +300,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 4,
     paddingHorizontal: 12,
-    backgroundColor: Colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
     gap: 8,
     height: 44,
   },
@@ -290,7 +311,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: Colors.text,
     paddingVertical: 0,
   },
   filterList: {
@@ -303,30 +323,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
     alignSelf: 'flex-start',
-  },
-  filterChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
   },
   filterChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.textMuted,
-  },
-  filterChipTextActive: {
-    color: Colors.white,
   },
   list: {
     padding: 16,
     gap: 10,
     paddingBottom: 100,
-  },
-  noteCard: {
-    gap: 10,
   },
   noteRow: {
     flexDirection: 'row',
@@ -347,20 +354,18 @@ const styles = StyleSheet.create({
   noteTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.text,
   },
   noteDate: {
     fontSize: 12,
-    color: Colors.textMuted,
   },
   noteMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginTop: 10,
   },
   fileName: {
     fontSize: 12,
-    color: Colors.textMuted,
     flex: 1,
   },
   empty: {
@@ -371,11 +376,9 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: Colors.textMuted,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: Colors.border,
   },
   fab: {
     position: 'absolute',
@@ -384,10 +387,8 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.45,
     shadowRadius: 16,

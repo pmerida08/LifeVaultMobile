@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Colors } from '../../constants/colors';
+import { useThemeColors } from '../../constants/colors';
 
 type BadgeVariant = 'primary' | 'success' | 'warning' | 'danger' | 'muted';
 
@@ -10,19 +10,21 @@ interface BadgeProps {
   style?: ViewStyle;
 }
 
-const variantColors: Record<BadgeVariant, { bg: string; text: string }> = {
-  primary: { bg: Colors.primarySurface, text: Colors.primary },
-  success: { bg: '#CCFBF1', text: '#0F766E' },
-  warning: { bg: '#FEF3C7', text: '#B45309' },
-  danger:  { bg: '#FFE4E6', text: '#BE123C' },
-  muted:   { bg: Colors.surfaceElevated, text: Colors.textMuted },
-};
-
 export function Badge({ label, variant = 'primary', style }: BadgeProps) {
-  const colors = variantColors[variant];
+  const colors = useThemeColors();
+
+  const variantColors: Record<BadgeVariant, { bg: string; text: string }> = {
+    primary: { bg: colors.primarySurface, text: colors.primary },
+    success: { bg: '#CCFBF1', text: '#0F766E' },
+    warning: { bg: '#FEF3C7', text: '#B45309' },
+    danger:  { bg: '#FFE4E6', text: '#BE123C' },
+    muted:   { bg: colors.surfaceElevated, text: colors.textMuted },
+  };
+
+  const c = variantColors[variant];
   return (
-    <View style={[styles.badge, { backgroundColor: colors.bg }, style]}>
-      <Text style={[styles.text, { color: colors.text }]}>{label}</Text>
+    <View style={[styles.badge, { backgroundColor: c.bg }, style]}>
+      <Text style={[styles.text, { color: c.text }]}>{label}</Text>
     </View>
   );
 }
