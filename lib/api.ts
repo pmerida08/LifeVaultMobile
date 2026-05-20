@@ -3,8 +3,6 @@ import { supabase } from './supabase';
 import type { VaultNote, Task, CalendarEvent } from '../types';
 
 const BUCKET = 'lifevault-documents';
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 const N8N_UPLOAD_URL = process.env.EXPO_PUBLIC_N8N_UPLOAD_URL!;
 
 // ─── Vault Notes ───────────────────────────────────────────────────────────────
@@ -89,24 +87,26 @@ export async function uploadDocument(
   const ext = filename.split('.').pop() ?? 'bin';
   const path = `${userId}/${Date.now()}.${ext}`;
 
-  const uploadResult = await FileSystem.uploadAsync(
-    `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`,
-    uri,
-    {
-      httpMethod: 'POST',
-      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-      headers: {
-        authorization: `Bearer ${session.access_token}`,
-        apikey: SUPABASE_ANON_KEY,
-        'content-type': mimeType,
-        'x-upsert': 'false',
-      },
-    }
-  );
+  // Leer el archivo como base64 — más fiable que uploadAsync en Android (content:// URIs)
+  const base64 = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
 
-  if (uploadResult.status >= 400) {
-    throw new Error(`Error al subir archivo: ${uploadResult.status}`);
+  // Decodificar base64 → Uint8Array (atob disponible en Hermes/RN)
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
   }
+
+  const { error: uploadError } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, bytes, { contentType: mimeType || 'application/octet-stream' });
+
+  if (uploadError) throw new Error(`Storage: ${uploadError.message}`);
+
+  // Tamaño real del archivo a partir de los bytes leídos
+  const actualSize = fileSize > 0 ? fileSize : bytes.byteLength;
 
   const { data: signedData } = await supabase.storage
     .from(BUCKET)
@@ -122,8 +122,8 @@ export async function uploadDocument(
       title: meta.title,
       category: meta.category,
       file_name: filename,
-      mime_type: mimeType,
-      file_size: fileSize,
+      mime_type: mimeType || 'application/octet-stream',
+      file_size: actualSize,
       tags: [],
       notes: meta.notes ?? null,
     }),

@@ -72,8 +72,8 @@ export function UploadModal({ visible, onClose }: UploadModalProps) {
       );
       handleClose();
       Alert.alert('Subiendo...', 'El documento se está procesando. Aparecerá en el Vault en unos segundos.');
-    } catch {
-      Alert.alert('Error', 'No se pudo subir el archivo. Inténtalo de nuevo.');
+    } catch (e: any) {
+      Alert.alert('Error al subir', e?.message ?? 'Error desconocido');
     }
   };
 
