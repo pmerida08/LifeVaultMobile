@@ -15,6 +15,7 @@ interface AuthStore {
   user: User | null;
   loading: boolean;
   initialize: () => Promise<void>;
+  cleanup: () => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
@@ -31,11 +32,17 @@ async function upsertProfile(userId: string, email: string, name: string, avatar
   }, { onConflict: 'id' });
 }
 
+let _authSubscription: { unsubscribe: () => void } | null = null;
+
 export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   loading: true,
 
   initialize: async () => {
+    // Limpia cualquier suscripción previa antes de crear una nueva
+    _authSubscription?.unsubscribe();
+    _authSubscription = null;
+
     set({ loading: true });
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
@@ -49,7 +56,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
       set({ user: null, loading: false });
     }
 
-    supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         const u = session.user;
         await upsertProfile(
@@ -68,6 +75,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
         set({ user: null });
       }
     });
+    _authSubscription = subscription;
+  },
+
+  cleanup: () => {
+    _authSubscription?.unsubscribe();
+    _authSubscription = null;
   },
 
   login: async (email, password) => {

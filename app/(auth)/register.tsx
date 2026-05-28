@@ -12,7 +12,7 @@ import Animated, {
   FadeInUp,
   Easing,
 } from 'react-native-reanimated';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';
@@ -40,9 +40,9 @@ export default function RegisterScreen() {
     setError('');
     try {
       await register(email.trim(), password, name.trim());
-      router.replace('/(tabs)');
-    } catch (e: any) {
-      setError(e.message ?? 'Error al crear la cuenta. Inténtalo de nuevo.');
+      // La redirección la gestiona el useEffect de _layout.tsx que observa `user`
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error al crear la cuenta. Inténtalo de nuevo.');
     } finally {
       setLoading(false);
     }

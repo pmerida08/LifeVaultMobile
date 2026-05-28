@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getErrorMessage } from '../lib/errors';
 import { fetchEvents, createEvent, updateEvent, deleteEvent } from '../lib/api';
 import {
   createGoogleEvent,
@@ -53,8 +54,8 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
     try {
       const events = await fetchEvents(userId);
       set({ events, loading: false });
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e) {
+      set({ error: getErrorMessage(e), loading: false });
     }
   },
 
@@ -82,8 +83,8 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
           }));
         }
       }
-    } catch (e: any) {
-      set({ error: e.message });
+    } catch (e) {
+      set({ error: getErrorMessage(e) });
     }
   },
 
@@ -106,8 +107,8 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
           )
         );
       }
-    } catch (e: any) {
-      set({ error: e.message });
+    } catch (e) {
+      set({ error: getErrorMessage(e) });
     }
   },
 
@@ -119,8 +120,8 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
       if (event?.google_event_id && (await isConnected())) {
         await deleteGoogleEvent(event.google_event_id);
       }
-    } catch (e: any) {
-      set({ error: e.message });
+    } catch (e) {
+      set({ error: getErrorMessage(e) });
     }
   },
 }));

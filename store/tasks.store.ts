@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getErrorMessage } from '../lib/errors';
 import {
   fetchTasks,
   createTask,
@@ -38,8 +39,8 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
     try {
       const tasks = await fetchTasks(userId);
       set({ tasks, loading: false });
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e) {
+      set({ error: getErrorMessage(e), loading: false });
     }
   },
 
@@ -64,8 +65,8 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
           }));
         }
       }
-    } catch (e: any) {
-      set({ error: e.message });
+    } catch (e) {
+      set({ error: getErrorMessage(e) });
     }
   },
 
@@ -81,8 +82,8 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
           status: status === 'done' ? 'completed' : 'needsAction',
         });
       }
-    } catch (e: any) {
-      set({ error: e.message });
+    } catch (e) {
+      set({ error: getErrorMessage(e) });
     }
   },
 
@@ -100,8 +101,8 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
           ...(payload.due_date !== undefined ? { due: payload.due_date ?? undefined } : {}),
         });
       }
-    } catch (e: any) {
-      set({ error: e.message });
+    } catch (e) {
+      set({ error: getErrorMessage(e) });
     }
   },
 
@@ -113,8 +114,8 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
       if (task?.google_task_id && (await isConnected())) {
         await deleteGoogleTask(task.google_task_id);
       }
-    } catch (e: any) {
-      set({ error: e.message });
+    } catch (e) {
+      set({ error: getErrorMessage(e) });
     }
   },
 

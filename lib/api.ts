@@ -137,7 +137,10 @@ export async function uploadDocument(
     encoding: 'base64' as any,
   });
 
-  // Decodificar base64 → Uint8Array (atob disponible en Hermes/RN)
+  // Decodificar base64 → Uint8Array.
+  // `atob` es seguro aquí: la cadena viene de FileSystem.readAsStringAsync con
+  // encoding 'base64', que garantiza que sólo contiene caracteres ASCII válidos
+  // del alfabeto base64. Hermes y el JSC de RN exponen atob globalmente.
   const binaryString = atob(base64);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {

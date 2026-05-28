@@ -16,7 +16,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';
@@ -45,9 +45,9 @@ export default function LoginScreen() {
     setError('');
     try {
       await login(email.trim(), password);
-      router.replace('/(tabs)');
-    } catch (e: any) {
-      setError(e.message ?? 'Credenciales incorrectas');
+      // La redirección la gestiona el useEffect de _layout.tsx que observa `user`
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Credenciales incorrectas');
     } finally {
       setLoading(false);
     }
@@ -58,9 +58,9 @@ export default function LoginScreen() {
     setError('');
     try {
       await loginWithGoogle();
-      router.replace('/(tabs)');
-    } catch (e: any) {
-      setError(e.message ?? 'Error al iniciar sesión con Google');
+      // La redirección la gestiona el useEffect de _layout.tsx que observa `user`
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error al iniciar sesión con Google');
     } finally {
       setGoogleLoading(false);
     }

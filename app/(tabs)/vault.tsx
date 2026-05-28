@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -141,7 +141,7 @@ function FAB({ onPress }: { onPress: () => void }) {
 export default function VaultScreen() {
   const colors = useThemeColors();
   const { user } = useAuthStore();
-  const { loading, setCategory, selectedCategory, filteredNotes, load } = useDocumentsStore();
+  const { loading, setCategory, selectedCategory, filteredNotes, load, notes } = useDocumentsStore();
 
   const [search, setSearch] = useState('');
   const [uploadVisible, setUploadVisible] = useState(false);
@@ -162,14 +162,15 @@ export default function VaultScreen() {
     setRefreshing(false);
   }, [user]);
 
-  const notes = filteredNotes(search);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const filteredList = useMemo(() => filteredNotes(search), [notes, selectedCategory, search]);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
       <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Vault</Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>{notes.length} documentos</Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>{filteredList.length} documentos</Text>
       </Animated.View>
 
       {/* Búsqueda */}
@@ -228,7 +229,7 @@ export default function VaultScreen() {
         <SkeletonVault />
       ) : (
         <FlatList
-          data={notes}
+          data={filteredList}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}

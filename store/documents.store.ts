@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { fetchVaultNotes, uploadDocument, updateVaultNote, deleteVaultNote, extractStoragePath } from '../lib/api';
+import { getErrorMessage } from '../lib/errors';
 import type { VaultNote } from '../types';
 
 interface UploadMeta {
@@ -34,8 +35,8 @@ export const useDocumentsStore = create<DocumentsStore>((set, get) => ({
     try {
       const notes = await fetchVaultNotes(userId);
       set({ notes, loading: false });
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e) {
+      set({ error: getErrorMessage(e), loading: false });
     }
   },
 
@@ -47,8 +48,8 @@ export const useDocumentsStore = create<DocumentsStore>((set, get) => ({
       // El INSERT lo hacemos nosotros en uploadDocument — refrescar directamente
       const notes = await fetchVaultNotes(userId);
       set({ notes, uploading: false });
-    } catch (e: any) {
-      set({ error: e.message, uploading: false });
+    } catch (e) {
+      set({ error: getErrorMessage(e), uploading: false });
       throw e;
     }
   },
@@ -59,8 +60,8 @@ export const useDocumentsStore = create<DocumentsStore>((set, get) => ({
       set((state) => ({
         notes: state.notes.map((n) => n.id === noteId ? { ...n, ...payload } : n),
       }));
-    } catch (e: any) {
-      set({ error: e.message });
+    } catch (e) {
+      set({ error: getErrorMessage(e) });
       throw e;
     }
   },
@@ -70,8 +71,8 @@ export const useDocumentsStore = create<DocumentsStore>((set, get) => ({
       const storagePath = extractStoragePath(fileUrl);
       await deleteVaultNote(noteId, storagePath);
       set((state) => ({ notes: state.notes.filter((n) => n.id !== noteId) }));
-    } catch (e: any) {
-      set({ error: e.message });
+    } catch (e) {
+      set({ error: getErrorMessage(e) });
       throw e;
     }
   },
