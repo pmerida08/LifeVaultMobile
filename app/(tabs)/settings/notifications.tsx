@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Switch, StyleSheet, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useThemeColors } from '../../../constants/colors';
@@ -41,13 +40,19 @@ export default function NotificationsScreen() {
 
   const requestPermission = async (): Promise<boolean> => {
     if (Platform.OS === 'android') return true;
-    const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== 'granted') {
-      setPermissionDenied(true);
-      showToast(t('notifications.permissionDenied'), 'error');
-      return false;
+    try {
+      const Notifications = await import('expo-notifications');
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        setPermissionDenied(true);
+        showToast(t('notifications.permissionDenied'), 'error');
+        return false;
+      }
+      return true;
+    } catch {
+      // Native module not available in current build — allow toggle without OS permission
+      return true;
     }
-    return true;
   };
 
   const togglePush = async (value: boolean) => {
