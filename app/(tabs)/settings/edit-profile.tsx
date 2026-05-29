@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuthStore } from '../../../store/auth.store';
 import { useThemeColors } from '../../../constants/colors';
@@ -70,15 +71,24 @@ export default function EditProfileScreen() {
       let uploadedUrl: string | undefined;
 
       if (avatarUri && avatarUri !== user?.avatar_url) {
-        const ext = avatarUri.split('.').pop() ?? 'jpg';
-        const path = `avatars/${user!.id}.${ext}`;
-        const response = await fetch(avatarUri);
-        const blob = await response.blob();
-        const arrayBuffer = await blob.arrayBuffer();
+        const ext = (avatarUri.split('.').pop() ?? 'jpg').split('?')[0];
+        const path = `${user!.id}/avatar.${ext}`;
+        const mimeType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+
+        const base64 = await FileSystem.readAsStringAsync(avatarUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
         const { error: uploadError } = await supabase.storage
           .from('lifevault-documents')
-          .upload(path, arrayBuffer, { contentType: `image/${ext}`, upsert: true });
+          .upload(path, bytes, { contentType: mimeType, upsert: true });
         if (uploadError) throw uploadError;
+
         const { data: urlData } = supabase.storage
           .from('lifevault-documents')
           .getPublicUrl(path);
