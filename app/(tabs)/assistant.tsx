@@ -15,6 +15,7 @@ import { useAssistantStore } from '../../store/assistant.store';
 import { MarkdownText } from '../../components/ui/MarkdownText';
 import { TypingDots } from '../../components/ui/TypingDots';
 import { useThemeColors } from '../../constants/colors';
+import { useT } from '../../store/i18n.store';
 import type { AIMessage, VaultNote } from '../../types';
 
 // ─── Attachment Card ──────────────────────────────────────────────────────────
@@ -115,6 +116,7 @@ const MessageBubble = React.memo(function MessageBubble({ message }: { message: 
 
 export default function AssistantScreen() {
   const colors = useThemeColors();
+  const t = useT();
   const { messages, loading, send, clearSession } = useAssistantStore();
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList>(null);
@@ -135,8 +137,8 @@ export default function AssistantScreen() {
             <Ionicons name="sparkles" size={20} color={colors.white} />
           </View>
           <View>
-            <Text style={[styles.title, { color: colors.text }]}>AI Assistant</Text>
-            <Text style={[styles.subtitle, { color: colors.textMuted }]}>Powered by LifeVault AI</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('assistant.title')}</Text>
+            <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t('assistant.subtitle')}</Text>
           </View>
         </View>
         <TouchableOpacity
@@ -144,6 +146,7 @@ export default function AssistantScreen() {
           style={styles.newSessionBtn}
           activeOpacity={0.7}
           disabled={loading}
+          accessibilityLabel={t('assistant.newSession')}
         >
           <Ionicons
             name="add-circle-outline"
@@ -161,9 +164,9 @@ export default function AssistantScreen() {
         {messages.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="chatbubbles-outline" size={48} color={colors.textMuted} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>How can I help you?</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('assistant.emptyTitle')}</Text>
             <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-              Ask me anything about your vault, tasks, or anything else.
+              {t('assistant.emptySubtitle')}
             </Text>
           </View>
         ) : (
@@ -187,7 +190,7 @@ export default function AssistantScreen() {
             style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
             value={input}
             onChangeText={setInput}
-            placeholder="Message..."
+            placeholder={t('assistant.messagePlaceholder')}
             placeholderTextColor={colors.textMuted}
             multiline
             maxLength={2000}

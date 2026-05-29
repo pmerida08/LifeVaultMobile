@@ -18,8 +18,10 @@ import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Colors } from '../../constants/colors';
+import { useT } from '../../store/i18n.store';
 
 export default function RegisterScreen() {
+  const t = useT();
   const { register } = useAuthStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -29,20 +31,19 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
-      setError('Rellena todos los campos');
+      setError(t('register.fillFields'));
       return;
     }
     if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
+      setError(t('register.passwordTooShort'));
       return;
     }
     setLoading(true);
     setError('');
     try {
       await register(email.trim(), password, name.trim());
-      // La redirección la gestiona el useEffect de _layout.tsx que observa `user`
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al crear la cuenta. Inténtalo de nuevo.');
+      setError(e instanceof Error ? e.message : t('register.createError'));
     } finally {
       setLoading(false);
     }
@@ -65,7 +66,7 @@ export default function RegisterScreen() {
             resizeMode="contain"
             accessibilityLabel="LifeVault"
           />
-          <Text style={styles.subtitle}>Crea tu cuenta</Text>
+          <Text style={styles.subtitle}>{t('register.title')}</Text>
         </Animated.View>
 
         {/* Form */}
@@ -74,7 +75,7 @@ export default function RegisterScreen() {
           style={styles.form}
         >
           <Input
-            label="Nombre"
+            label={t('register.name')}
             value={name}
             onChangeText={setName}
             placeholder="Pablo"
@@ -83,7 +84,7 @@ export default function RegisterScreen() {
             textContentType="name"
           />
           <Input
-            label="Email"
+            label={t('register.email')}
             value={email}
             onChangeText={setEmail}
             placeholder="tu@email.com"
@@ -93,7 +94,7 @@ export default function RegisterScreen() {
             textContentType="emailAddress"
           />
           <Input
-            label="Contraseña"
+            label={t('register.password')}
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••"
@@ -103,7 +104,7 @@ export default function RegisterScreen() {
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <Button
-            label="Crear cuenta"
+            label={t('register.createAccount')}
             onPress={handleRegister}
             loading={loading}
             size="lg"
@@ -116,9 +117,9 @@ export default function RegisterScreen() {
           entering={FadeInUp.duration(500).delay(300).easing(Easing.out(Easing.quad))}
           style={styles.footer}
         >
-          <Text style={styles.footerText}>¿Ya tienes cuenta? </Text>
+          <Text style={styles.footerText}>{t('register.hasAccount')} </Text>
           <Link href="/(auth)/login" style={styles.footerLink}>
-            Inicia sesión
+            {t('register.signIn')}
           </Link>
         </Animated.View>
       </KeyboardAvoidingView>

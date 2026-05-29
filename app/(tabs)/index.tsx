@@ -11,13 +11,14 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { SkeletonDashboard } from '../../components/ui/Skeleton';
 import { useThemeColors } from '../../constants/colors';
+import { useT } from '../../store/i18n.store';
 import type { Task, CalendarEvent } from '../../types';
 
-function getGreeting(): string {
+function getGreeting(t: (key: string) => string): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Buenos días';
-  if (hour < 18) return 'Buenas tardes';
-  return 'Buenas noches';
+  if (hour < 12) return t('dashboard.goodMorning');
+  if (hour < 18) return t('dashboard.goodAfternoon');
+  return t('dashboard.goodEvening');
 }
 
 function formatDate(dateStr: string): string {
@@ -28,14 +29,9 @@ function priorityVariant(priority: Task['priority']) {
   return priority === 'high' ? 'danger' : priority === 'medium' ? 'warning' : 'success';
 }
 
-const SUMMARY_ICONS = [
-  { icon: 'folder' as const, label: 'Documentos' },
-  { icon: 'checkmark-circle' as const, label: 'Pendientes' },
-  { icon: 'calendar' as const, label: 'Eventos' },
-];
-
 export default function DashboardScreen() {
   const colors = useThemeColors();
+  const t = useT();
   const { user } = useAuthStore();
   const { notes, load: loadDocs } = useDocumentsStore();
   const { tasks, load: loadTasks } = useTasksStore();
@@ -43,6 +39,12 @@ export default function DashboardScreen() {
 
   const [initialLoad, setInitialLoad] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const SUMMARY_ICONS = [
+    { icon: 'folder' as const, label: t('dashboard.documents') },
+    { icon: 'checkmark-circle' as const, label: t('dashboard.pending') },
+    { icon: 'calendar' as const, label: t('dashboard.events') },
+  ];
 
   const loadAll = useCallback(async () => {
     if (!user) return;
@@ -78,7 +80,7 @@ export default function DashboardScreen() {
       {/* Greeting */}
       <Animated.View entering={FadeInDown.duration(500).delay(0)} style={styles.greeting}>
         <Text style={styles.greetingText}>
-          {getGreeting()}, {user?.name?.split(' ')[0] ?? 'ahí'}
+          {getGreeting(t)}, {user?.name?.split(' ')[0] ?? 'ahí'}
         </Text>
         <Text style={styles.dateText}>
           {new Date().toLocaleDateString('es-ES', {
@@ -110,12 +112,12 @@ export default function DashboardScreen() {
 
       {/* Pending tasks */}
       <Animated.View entering={FadeInUp.duration(500).delay(340)} style={styles.section}>
-        <Text style={styles.sectionTitle}>Tareas recientes</Text>
+        <Text style={styles.sectionTitle}>{t('dashboard.recentTasks')}</Text>
         {pendingTasks.length === 0 ? (
           <Card>
             <View style={styles.emptyState}>
               <Ionicons name="checkmark-done-outline" size={28} color={colors.textMuted} accessibilityElementsHidden />
-              <Text style={styles.emptyText}>Sin tareas pendientes</Text>
+              <Text style={styles.emptyText}>{t('dashboard.noPendingTasks')}</Text>
             </View>
           </Card>
         ) : (
@@ -133,7 +135,7 @@ export default function DashboardScreen() {
                   <Badge label={task.priority} variant={priorityVariant(task.priority)} />
                 </View>
                 {task.due_date && (
-                  <Text style={styles.taskDue}>Vence {formatDate(task.due_date)}</Text>
+                  <Text style={styles.taskDue}>{t('dashboard.due')} {formatDate(task.due_date)}</Text>
                 )}
               </Card>
             </Animated.View>
@@ -143,12 +145,12 @@ export default function DashboardScreen() {
 
       {/* Upcoming events */}
       <Animated.View entering={FadeInUp.duration(500).delay(480)} style={styles.section}>
-        <Text style={styles.sectionTitle}>Próximos eventos</Text>
+        <Text style={styles.sectionTitle}>{t('dashboard.upcomingEvents')}</Text>
         {upcomingEvents.length === 0 ? (
           <Card>
             <View style={styles.emptyState}>
               <Ionicons name="calendar-outline" size={28} color={colors.textMuted} accessibilityElementsHidden />
-              <Text style={styles.emptyText}>Sin eventos próximos</Text>
+              <Text style={styles.emptyText}>{t('dashboard.noUpcomingEvents')}</Text>
             </View>
           </Card>
         ) : (

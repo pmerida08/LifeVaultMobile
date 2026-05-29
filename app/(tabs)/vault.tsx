@@ -26,18 +26,10 @@ import { SkeletonVault } from '../../components/ui/Skeleton';
 import { UploadModal } from '../../components/vault/UploadModal';
 import { DetailModal } from '../../components/vault/DetailModal';
 import { useThemeColors } from '../../constants/colors';
+import { useT } from '../../store/i18n.store';
 import type { VaultNote } from '../../types';
 
 type Category = VaultNote['category'];
-
-const CATEGORIES: { label: string; value: Category | null }[] = [
-  { label: 'Todo', value: null },
-  { label: 'Legal', value: 'legal' },
-  { label: 'Salud', value: 'health' },
-  { label: 'Finanzas', value: 'finance' },
-  { label: 'Personal', value: 'personal' },
-  { label: 'Otros', value: 'other' },
-];
 
 const CATEGORY_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   legal: 'briefcase-outline',
@@ -65,9 +57,10 @@ interface NoteCardProps {
   note: VaultNote;
   index: number;
   onPress: () => void;
+  pinnedLabel: string;
 }
 
-const NoteCard = React.memo(function NoteCard({ note, index, onPress }: NoteCardProps) {
+const NoteCard = React.memo(function NoteCard({ note, index, onPress, pinnedLabel }: NoteCardProps) {
   const colors = useThemeColors();
   const icon = CATEGORY_ICONS[note.category ?? 'other'] ?? 'document-outline';
   const variant = CATEGORY_VARIANTS[note.category ?? 'other'] ?? 'muted';
@@ -99,7 +92,7 @@ const NoteCard = React.memo(function NoteCard({ note, index, onPress }: NoteCard
               <Text style={[styles.noteDate, { color: colors.textMuted }]}>{formatDate(note.created_at)}</Text>
             </View>
             {note.is_pinned && (
-              <Ionicons name="bookmark" size={16} color={colors.accent} accessibilityLabel="Documento fijado" />
+              <Ionicons name="bookmark" size={16} color={colors.accent} accessibilityLabel={pinnedLabel} />
             )}
             <Ionicons name="chevron-forward" size={16} color={colors.border} />
           </View>
@@ -117,7 +110,7 @@ const NoteCard = React.memo(function NoteCard({ note, index, onPress }: NoteCard
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-function FAB({ onPress }: { onPress: () => void }) {
+function FAB({ onPress, label }: { onPress: () => void; label: string }) {
   const colors = useThemeColors();
   const scale = useSharedValue(1);
   const fabStyle = useAnimatedStyle(() => ({
@@ -130,7 +123,7 @@ function FAB({ onPress }: { onPress: () => void }) {
       onPressIn={() => { scale.value = withTiming(0.92, { duration: 100 }); }}
       onPressOut={() => { scale.value = withSpring(1, { damping: 10, stiffness: 200 }); }}
       accessibilityRole="button"
-      accessibilityLabel="Añadir documento"
+      accessibilityLabel={label}
       style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }, fabStyle]}
     >
       <Ionicons name="add" size={28} color={colors.white} accessibilityElementsHidden />
@@ -140,6 +133,7 @@ function FAB({ onPress }: { onPress: () => void }) {
 
 export default function VaultScreen() {
   const colors = useThemeColors();
+  const t = useT();
   const { user } = useAuthStore();
   const { loading, setCategory, selectedCategory, filteredNotes, load, notes } = useDocumentsStore();
 
@@ -148,6 +142,15 @@ export default function VaultScreen() {
   const [selectedNote, setSelectedNote] = useState<VaultNote | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
+
+  const CATEGORIES: { label: string; value: Category | null }[] = [
+    { label: t('vault.catAll'),      value: null       },
+    { label: t('vault.catLegal'),    value: 'legal'    },
+    { label: t('vault.catHealth'),   value: 'health'   },
+    { label: t('vault.catFinance'),  value: 'finance'  },
+    { label: t('vault.catPersonal'), value: 'personal' },
+    { label: t('vault.catOther'),    value: 'other'    },
+  ];
 
   useEffect(() => {
     if (user) {
@@ -169,11 +172,11 @@ export default function VaultScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
       <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Vault</Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>{filteredList.length} documentos</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('vault.title')}</Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>{filteredList.length} {t('vault.documents')}</Text>
       </Animated.View>
 
-      {/* Búsqueda */}
+      {/* Search */}
       <Animated.View
         entering={FadeInDown.duration(400).delay(60)}
         style={[styles.searchWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -181,13 +184,13 @@ export default function VaultScreen() {
         <Ionicons name="search-outline" size={17} color={colors.textMuted} style={styles.searchIcon} />
         <TextInput
           style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Buscar documentos…"
+          placeholder={t('vault.searchPlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={setSearch}
           returnKeyType="search"
           clearButtonMode="while-editing"
-          accessibilityLabel="Buscar documentos"
+          accessibilityLabel={t('vault.searchPlaceholder')}
         />
       </Animated.View>
 
@@ -205,7 +208,7 @@ export default function VaultScreen() {
               <Pressable
                 onPress={() => setCategory(item.value)}
                 accessibilityRole="button"
-                accessibilityLabel={`Filtrar por ${item.label}`}
+                accessibilityLabel={t('vault.filterBy', { label: item.label })}
                 accessibilityState={{ selected: active }}
                 style={[
                   styles.filterChip,
@@ -246,10 +249,12 @@ export default function VaultScreen() {
             <Animated.View entering={FadeInUp.duration(400)} style={styles.empty}>
               <Ionicons name="folder-open-outline" size={52} color={colors.border} accessibilityElementsHidden />
               <Text style={[styles.emptyTitle, { color: colors.textMuted }]}>
-                {search ? 'Sin resultados' : 'Sin documentos'}
+                {search ? t('vault.noResults') : t('vault.noDocuments')}
               </Text>
               <Text style={[styles.emptySubtitle, { color: colors.border }]}>
-                {search ? `No hay documentos con "${search}"` : 'Toca + para añadir el primero'}
+                {search
+                  ? t('vault.noResultsHint', { search })
+                  : t('vault.noDocumentsHint')}
               </Text>
             </Animated.View>
           }
@@ -258,12 +263,13 @@ export default function VaultScreen() {
               note={item}
               index={index}
               onPress={() => setSelectedNote(item)}
+              pinnedLabel={t('vault.pinned')}
             />
           )}
         />
       )}
 
-      <FAB onPress={() => setUploadVisible(true)} />
+      <FAB onPress={() => setUploadVisible(true)} label={t('vault.addDocument')} />
 
       <UploadModal
         visible={uploadVisible}

@@ -23,6 +23,7 @@ import { Input } from '../../components/ui/Input';
 import { SkeletonPlanner } from '../../components/ui/Skeleton';
 import { GoogleConnectButton } from '../../components/GoogleConnectButton';
 import { useThemeColors } from '../../constants/colors';
+import { useT } from '../../store/i18n.store';
 import { useToast } from '../../lib/toast';
 import { isConnected } from '../../lib/google-auth';
 import { importAllFromGoogle } from '../../lib/google-sync';
@@ -33,12 +34,6 @@ import type { Task, CalendarEvent } from '../../types';
 type StatusGroup = 'todo' | 'in_progress' | 'done';
 type TaskModalState = null | { mode: 'create' } | { mode: 'edit'; task: Task };
 type EventModalState = null | { mode: 'create' } | { mode: 'edit'; event: CalendarEvent };
-
-const STATUS_LABELS: Record<StatusGroup, string> = {
-  todo: 'Por hacer',
-  in_progress: 'En progreso',
-  done: 'Hecho',
-};
 
 const PRIORITY_VARIANTS: Record<Task['priority'], 'danger' | 'warning' | 'success'> = {
   high: 'danger',
@@ -80,11 +75,13 @@ function formatDisplay(iso: string): string {
 
 const TaskItem = React.memo(function TaskItem({
   task,
+  dueLabel,
   onToggle,
   onEdit,
   onDelete,
 }: {
   task: Task;
+  dueLabel: string;
   onToggle: (id: string, next: Task['status']) => void;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
@@ -126,7 +123,7 @@ const TaskItem = React.memo(function TaskItem({
           </Text>
           {task.due_date && (
             <Text style={[styles.taskDue, { color: colors.textMuted }]}>
-              Vence {formatDisplay(task.due_date)}
+              {dueLabel} {formatDisplay(task.due_date)}
             </Text>
           )}
         </View>
@@ -182,6 +179,7 @@ function TaskModal({
   onSubmit: (data: Pick<Task, 'title' | 'description' | 'priority' | 'due_date'>) => Promise<void>;
 }) {
   const colors = useThemeColors();
+  const t = useT();
   const isEdit = state.mode === 'edit';
   const [title, setTitle] = useState(isEdit ? state.task.title : '');
   const [description, setDescription] = useState(isEdit ? (state.task.description ?? '') : '');
@@ -206,21 +204,21 @@ function TaskModal({
 
   return (
     <View style={[styles.modal, { backgroundColor: colors.surface }]}>
-      <Text style={[styles.modalTitle, { color: colors.text }]}>{isEdit ? 'Editar tarea' : 'Nueva tarea'}</Text>
+      <Text style={[styles.modalTitle, { color: colors.text }]}>{isEdit ? t('planner.editTask') : t('planner.newTask')}</Text>
       <Input
-        label="Título"
+        label={t('planner.fieldTitle')}
         value={title}
         onChangeText={setTitle}
-        placeholder="Título de la tarea..."
+        placeholder={`${t('planner.fieldTitle')}...`}
         autoFocus
       />
       <Input
-        label="Descripción (opcional)"
+        label={t('planner.fieldDescription')}
         value={description}
         onChangeText={setDescription}
         placeholder="Notas..."
       />
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>Prioridad</Text>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.priority')}</Text>
       <View style={styles.chipRow}>
         {priorities.map((p) => (
           <TouchableOpacity
@@ -232,24 +230,24 @@ function TaskModal({
             ]}
           >
             <Text style={[styles.chipText, { color: priority === p ? colors.white : colors.textMuted }]}>
-              {p === 'low' ? 'Baja' : p === 'medium' ? 'Media' : 'Alta'}
+              {p === 'low' ? t('planner.priorityLow') : p === 'medium' ? t('planner.priorityMedium') : t('planner.priorityHigh')}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>Fecha límite</Text>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.dueDate')}</Text>
       <RNTextInput
         style={[styles.dateInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
         value={dueDate}
         onChangeText={setDueDate}
-        placeholder="AAAA-MM-DD HH:MM"
+        placeholder={t('planner.dateFormat')}
         placeholderTextColor={colors.textMuted}
         keyboardType="numbers-and-punctuation"
       />
       <View style={styles.modalActions}>
-        <Button label="Cancelar" variant="ghost" onPress={onClose} style={styles.modalBtn} />
+        <Button label={t('planner.cancel')} variant="ghost" onPress={onClose} style={styles.modalBtn} />
         <Button
-          label={isEdit ? 'Guardar' : 'Crear'}
+          label={isEdit ? t('planner.save') : t('planner.create')}
           onPress={handleSubmit}
           loading={loading}
           disabled={!title.trim()}
@@ -274,6 +272,7 @@ function EventModal({
   onError: (msg: string) => void;
 }) {
   const colors = useThemeColors();
+  const t = useT();
   const isEdit = state.mode === 'edit';
   const [title, setTitle] = useState(isEdit ? state.event.title : '');
   const [description, setDescription] = useState(isEdit ? (state.event.description ?? '') : '');
@@ -287,7 +286,7 @@ function EventModal({
     if (!title.trim() || !startAt.trim()) return;
     const parsedStart = parseDateInput(startAt);
     if (!parsedStart) {
-      onError('Fecha inválida. Usa el formato AAAA-MM-DD HH:MM');
+      onError(t('planner.invalidDate'));
       return;
     }
     setLoading(true);
@@ -310,40 +309,40 @@ function EventModal({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={[styles.modalTitle, { color: colors.text }]}>{isEdit ? 'Editar evento' : 'Nuevo evento'}</Text>
+      <Text style={[styles.modalTitle, { color: colors.text }]}>{isEdit ? t('planner.editEvent') : t('planner.newEvent')}</Text>
       <Input
-        label="Título"
+        label={t('planner.eventTitle')}
         value={title}
         onChangeText={setTitle}
-        placeholder="Nombre del evento..."
+        placeholder={`${t('planner.eventTitle')}...`}
         autoFocus
       />
       <Input
-        label="Descripción (opcional)"
+        label={t('planner.eventDescription')}
         value={description}
         onChangeText={setDescription}
         placeholder="Notas..."
       />
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>Inicio (AAAA-MM-DD HH:MM)</Text>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.eventStart')}</Text>
       <RNTextInput
         style={[styles.dateInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
         value={startAt}
         onChangeText={setStartAt}
-        placeholder="2024-12-31 10:00"
+        placeholder={t('planner.dateFormat')}
         placeholderTextColor={colors.textMuted}
         keyboardType="numbers-and-punctuation"
       />
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>Fin (AAAA-MM-DD HH:MM, opcional)</Text>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.eventEnd')}</Text>
       <RNTextInput
         style={[styles.dateInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
         value={endAt}
         onChangeText={setEndAt}
-        placeholder="2024-12-31 11:00"
+        placeholder={t('planner.dateFormat')}
         placeholderTextColor={colors.textMuted}
         keyboardType="numbers-and-punctuation"
       />
       <View style={styles.switchRow}>
-        <Text style={[styles.fieldLabel, { color: colors.text }]}>Todo el día</Text>
+        <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.allDay')}</Text>
         <Switch
           value={allDay}
           onValueChange={setAllDay}
@@ -351,7 +350,7 @@ function EventModal({
           thumbColor={colors.white}
         />
       </View>
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>Color</Text>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.color')}</Text>
       <View style={styles.colorRow}>
         {EVENT_COLORS.map((c) => (
           <TouchableOpacity
@@ -366,9 +365,9 @@ function EventModal({
         ))}
       </View>
       <View style={styles.modalActions}>
-        <Button label="Cancelar" variant="ghost" onPress={onClose} style={styles.modalBtn} />
+        <Button label={t('planner.cancel')} variant="ghost" onPress={onClose} style={styles.modalBtn} />
         <Button
-          label={isEdit ? 'Guardar' : 'Crear'}
+          label={isEdit ? t('planner.save') : t('planner.create')}
           onPress={handleSubmit}
           loading={loading}
           disabled={!title.trim() || !startAt.trim()}
@@ -383,6 +382,7 @@ function EventModal({
 
 export default function PlannerScreen() {
   const colors = useThemeColors();
+  const t = useT();
   const { show: showToast } = useToast();
   const { user } = useAuthStore();
   const {
@@ -409,6 +409,12 @@ export default function PlannerScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
 
+  const STATUS_LABELS: Record<StatusGroup, string> = {
+    todo: t('planner.statusTodo'),
+    in_progress: t('planner.statusInProgress'),
+    done: t('planner.statusDone'),
+  };
+
   const loadAll = useCallback(async () => {
     if (!user) return;
     await Promise.all([loadTasks(user.id), loadEvents(user.id)]);
@@ -434,11 +440,11 @@ export default function PlannerScreen() {
   }, [loadAll]);
 
   const handleDeleteTask = useCallback((taskId: string) => {
-    removeTask(taskId).then(() => showToast('Tarea eliminada', 'success'));
+    removeTask(taskId).then(() => showToast(t('planner.taskDeleted'), 'success'));
   }, [removeTask, showToast]);
 
   const handleDeleteEvent = useCallback((eventId: string) => {
-    removeEvent(eventId).then(() => showToast('Evento eliminado', 'success'));
+    removeEvent(eventId).then(() => showToast(t('planner.eventDeleted'), 'success'));
   }, [removeEvent, showToast]);
 
   const handleTaskSubmit = useCallback(async (
@@ -448,13 +454,13 @@ export default function PlannerScreen() {
     try {
       if (taskModal?.mode === 'edit') {
         await updateTask(taskModal.task.id, data);
-        showToast('Tarea actualizada', 'success');
+        showToast(t('planner.taskUpdated'), 'success');
       } else {
         await createTask(user.id, data);
-        showToast('Tarea creada', 'success');
+        showToast(t('planner.taskCreated'), 'success');
       }
     } catch {
-      showToast('Error al guardar la tarea', 'error');
+      showToast(t('planner.taskSaveError'), 'error');
     }
   }, [user, taskModal, updateTask, createTask, showToast]);
 
@@ -465,19 +471,19 @@ export default function PlannerScreen() {
     try {
       if (eventModal?.mode === 'edit') {
         await updateEvent(eventModal.event.id, data);
-        showToast('Evento actualizado', 'success');
+        showToast(t('planner.eventUpdated'), 'success');
       } else {
         await createEvent(user.id, data);
-        showToast('Evento creado', 'success');
+        showToast(t('planner.eventCreated'), 'success');
       }
     } catch {
-      showToast('Error al guardar el evento', 'error');
+      showToast(t('planner.eventSaveError'), 'error');
     }
   }, [user, eventModal, updateEvent, createEvent, showToast]);
 
   const grouped = (['todo', 'in_progress', 'done'] as StatusGroup[]).map((status) => ({
     status,
-    tasks: tasks.filter((t) => t.status === status),
+    tasks: tasks.filter((task) => task.status === status),
   }));
 
   const isLoading = initialLoad && (tasksLoading || eventsLoading);
@@ -497,7 +503,7 @@ export default function PlannerScreen() {
       >
         {/* Header */}
         <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Planner</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('planner.title')}</Text>
           <View style={styles.headerActions}>
             <GoogleConnectButton
               userId={user?.id ?? ''}
@@ -528,7 +534,7 @@ export default function PlannerScreen() {
           <>
             {/* Tasks */}
             <Animated.View entering={FadeInUp.duration(400).delay(80)} style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Tareas</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('planner.tasks')}</Text>
               {grouped.map(({ status, tasks: groupTasks }, gi) => (
                 <Animated.View
                   key={status}
@@ -544,14 +550,15 @@ export default function PlannerScreen() {
                     </Text>
                   </View>
                   {groupTasks.length === 0 ? (
-                    <Text style={[styles.emptyText, { color: colors.textMuted }]}>Sin tareas</Text>
+                    <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t('planner.noTasks')}</Text>
                   ) : (
                     groupTasks.map((task, ti) => (
                       <Animated.View key={task.id} entering={FadeInUp.duration(300).delay(120 + ti * 40)}>
                         <TaskItem
                           task={task}
+                          dueLabel={t('planner.due')}
                           onToggle={updateStatus}
-                          onEdit={(t) => setTaskModal({ mode: 'edit', task: t })}
+                          onEdit={(tk) => setTaskModal({ mode: 'edit', task: tk })}
                           onDelete={handleDeleteTask}
                         />
                       </Animated.View>
@@ -563,10 +570,10 @@ export default function PlannerScreen() {
 
             {/* Events */}
             <Animated.View entering={FadeInUp.duration(400).delay(200)} style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Próximos eventos</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('planner.upcomingEvents')}</Text>
               {events.length === 0 ? (
                 <Card>
-                  <Text style={[styles.emptyText, { color: colors.textMuted }]}>Sin eventos próximos</Text>
+                  <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t('planner.noEvents')}</Text>
                 </Card>
               ) : (
                 events.map((event, ei) => (

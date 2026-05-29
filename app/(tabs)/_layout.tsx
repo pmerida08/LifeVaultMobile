@@ -7,6 +7,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { useThemeColors } from '../../constants/colors';
+import { useT } from '../../store/i18n.store';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -38,6 +39,7 @@ function TabIcon({ name, focused }: { name: IoniconName; focused: boolean }) {
 
 export default function TabsLayout() {
   const colors = useThemeColors();
+  const t = useT();
 
   return (
     <Tabs
@@ -67,35 +69,35 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('tabs.home'),
           tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="vault"
         options={{
-          title: 'Vault',
+          title: t('tabs.vault'),
           tabBarIcon: ({ focused }) => <TabIcon name="folder" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="assistant"
         options={{
-          title: 'Assistant',
+          title: t('tabs.assistant'),
           tabBarIcon: ({ focused }) => <TabIcon name="sparkles" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="planner"
         options={{
-          title: 'Planner',
+          title: t('tabs.planner'),
           tabBarIcon: ({ focused }) => <TabIcon name="calendar" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: t('tabs.settings'),
           tabBarIcon: ({ focused }) => <TabIcon name="person" focused={focused} />,
         }}
       />

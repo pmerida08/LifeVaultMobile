@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuthStore } from '../../store/auth.store';
 import { useThemeStore, ThemePreference } from '../../store/theme.store';
+import { useI18nStore, useT, LangPreference } from '../../store/i18n.store';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -28,30 +29,23 @@ const PLAN_VARIANTS: Record<string, 'muted' | 'primary' | 'success'> = {
 
 // ─── Appearance Modal ─────────────────────────────────────────────────────────
 
-const THEME_OPTIONS: { value: ThemePreference; label: string; icon: React.ComponentProps<typeof Ionicons>['name']; description: string }[] = [
-  { value: 'system', label: 'Sistema',  icon: 'phone-portrait-outline', description: 'Sigue la configuración del dispositivo' },
-  { value: 'light',  label: 'Claro',    icon: 'sunny-outline',          description: 'Siempre tema claro'                    },
-  { value: 'dark',   label: 'Oscuro',   icon: 'moon-outline',           description: 'Siempre tema oscuro'                   },
-];
-
 function AppearanceModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const colors = useThemeColors();
+  const t = useT();
   const { theme, setTheme } = useThemeStore();
 
+  const THEME_OPTIONS: { value: ThemePreference; label: string; icon: React.ComponentProps<typeof Ionicons>['name']; description: string }[] = [
+    { value: 'system', label: t('settings.themeSystem'), icon: 'phone-portrait-outline', description: t('settings.themeSystemDesc') },
+    { value: 'light',  label: t('settings.themeLight'),  icon: 'sunny-outline',          description: t('settings.themeLightDesc')  },
+    { value: 'dark',   label: t('settings.themeDark'),   icon: 'moon-outline',           description: t('settings.themeDarkDesc')   },
+  ];
+
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={[styles.sheet, { backgroundColor: colors.surface }]} onPress={() => {}}>
-          {/* Handle */}
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
-
-          <Text style={[styles.sheetTitle, { color: colors.text }]}>Apariencia</Text>
-
+          <Text style={[styles.sheetTitle, { color: colors.text }]}>{t('settings.appearanceTitle')}</Text>
           <View style={styles.optionList}>
             {THEME_OPTIONS.map((opt) => {
               const active = theme === opt.value;
@@ -73,9 +67,57 @@ function AppearanceModal({ visible, onClose }: { visible: boolean; onClose: () =
                     <Text style={[styles.optionLabel, { color: colors.text }]}>{opt.label}</Text>
                     <Text style={[styles.optionDesc, { color: colors.textMuted }]}>{opt.description}</Text>
                   </View>
-                  {active && (
-                    <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
-                  )}
+                  {active && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+// ─── Language Modal ───────────────────────────────────────────────────────────
+
+function LanguageModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const colors = useThemeColors();
+  const t = useT();
+  const { lang, setLang } = useI18nStore();
+
+  const LANG_OPTIONS: { value: LangPreference; label: string; icon: React.ComponentProps<typeof Ionicons>['name']; description: string }[] = [
+    { value: 'es', label: t('settings.langEs'), icon: 'language-outline', description: t('settings.langEsDesc') },
+    { value: 'en', label: t('settings.langEn'), icon: 'globe-outline',    description: t('settings.langEnDesc') },
+  ];
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={[styles.sheet, { backgroundColor: colors.surface }]} onPress={() => {}}>
+          <View style={[styles.handle, { backgroundColor: colors.border }]} />
+          <Text style={[styles.sheetTitle, { color: colors.text }]}>{t('settings.languageTitle')}</Text>
+          <View style={styles.optionList}>
+            {LANG_OPTIONS.map((opt) => {
+              const active = lang === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  onPress={() => { setLang(opt.value); onClose(); }}
+                  activeOpacity={0.7}
+                  style={[
+                    styles.optionRow,
+                    { borderColor: active ? colors.primary : colors.border },
+                    active && { backgroundColor: colors.primarySurface },
+                  ]}
+                >
+                  <View style={[styles.optionIcon, { backgroundColor: active ? colors.primary : colors.surfaceElevated }]}>
+                    <Ionicons name={opt.icon} size={20} color={active ? colors.white : colors.textMuted} />
+                  </View>
+                  <View style={styles.optionText}>
+                    <Text style={[styles.optionLabel, { color: colors.text }]}>{opt.label}</Text>
+                    <Text style={[styles.optionDesc, { color: colors.textMuted }]}>{opt.description}</Text>
+                  </View>
+                  {active && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
                 </TouchableOpacity>
               );
             })}
@@ -108,12 +150,14 @@ function Separator() {
 
 export default function SettingsScreen() {
   const colors = useThemeColors();
+  const t = useT();
   const { user, logout } = useAuthStore();
   const { show: showToast } = useToast();
   const [appearanceVisible, setAppearanceVisible] = useState(false);
+  const [languageVisible, setLanguageVisible] = useState(false);
 
   const handleLogout = () => {
-    showToast('Sesión cerrada', 'info');
+    showToast(t('settings.loggedOut'), 'info');
     setTimeout(async () => {
       await logout();
       router.replace('/(auth)/login');
@@ -134,7 +178,7 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <Animated.View entering={FadeInDown.duration(400)}>
-          <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('settings.title')}</Text>
         </Animated.View>
 
         {/* Profile card */}
@@ -153,58 +197,68 @@ export default function SettingsScreen() {
 
         {/* Account */}
         <Animated.View entering={FadeInDown.duration(400).delay(120)} style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Account</Text>
+          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>{t('settings.accountSection')}</Text>
           <Card style={styles.menuCard}>
-            <MenuItem icon="person-outline" label="Edit profile" />
+            <MenuItem icon="person-outline" label={t('settings.editProfile')} />
             <Separator />
-            <MenuItem icon="key-outline" label="Change password" />
+            <MenuItem icon="key-outline" label={t('settings.changePassword')} />
             <Separator />
-            <MenuItem icon="card-outline" label="Subscription" />
+            <MenuItem icon="card-outline" label={t('settings.subscription')} />
           </Card>
         </Animated.View>
 
         {/* App */}
         <Animated.View entering={FadeInDown.duration(400).delay(160)} style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>App</Text>
+          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>{t('settings.appSection')}</Text>
           <Card style={styles.menuCard}>
-            <MenuItem icon="notifications-outline" label="Notifications" />
+            <MenuItem icon="notifications-outline" label={t('settings.notifications')} />
             <Separator />
             <MenuItem
               icon="moon-outline"
-              label="Appearance"
+              label={t('settings.appearance')}
               onPress={() => setAppearanceVisible(true)}
             />
             <Separator />
-            <MenuItem icon="shield-outline" label="Privacy" />
+            <MenuItem
+              icon="language-outline"
+              label={t('settings.language')}
+              onPress={() => setLanguageVisible(true)}
+            />
+            <Separator />
+            <MenuItem icon="shield-outline" label={t('settings.privacy')} />
           </Card>
         </Animated.View>
 
         {/* Support */}
         <Animated.View entering={FadeInDown.duration(400).delay(200)} style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Support</Text>
+          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>{t('settings.supportSection')}</Text>
           <Card style={styles.menuCard}>
-            <MenuItem icon="help-circle-outline" label="Help & FAQ" />
+            <MenuItem icon="help-circle-outline" label={t('settings.helpFaq')} />
             <Separator />
-            <MenuItem icon="information-circle-outline" label="About LifeVault" />
+            <MenuItem icon="information-circle-outline" label={t('settings.about')} />
           </Card>
         </Animated.View>
 
         {/* Logout */}
         <Animated.View entering={FadeInDown.duration(400).delay(240)}>
           <Button
-            label="Sign out"
+            label={t('settings.signOut')}
             variant="danger"
             onPress={handleLogout}
             style={styles.logoutButton}
           />
         </Animated.View>
 
-        <Text style={[styles.version, { color: colors.textMuted }]}>LifeVault Mobile v1.0.0</Text>
+        <Text style={[styles.version, { color: colors.textMuted }]}>{t('settings.version')}</Text>
       </ScrollView>
 
       <AppearanceModal
         visible={appearanceVisible}
         onClose={() => setAppearanceVisible(false)}
+      />
+      <LanguageModal
+        visible={languageVisible}
+        onClose={() => setLanguageVisible(false)}
       />
     </SafeAreaView>
   );
@@ -228,7 +282,6 @@ const styles = StyleSheet.create({
   separator: { height: 1, marginHorizontal: 16 },
   logoutButton: { marginTop: 8 },
   version: { textAlign: 'center', fontSize: 12, paddingBottom: 8 },
-  // Modal
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',

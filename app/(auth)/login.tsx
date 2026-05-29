@@ -22,11 +22,13 @@ import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Colors, useThemeColors } from '../../constants/colors';
+import { useT } from '../../store/i18n.store';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function LoginScreen() {
   const colors = useThemeColors();
+  const t = useT();
   const { login, loginWithGoogle } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,14 +42,13 @@ export default function LoginScreen() {
   }));
 
   const handleLogin = async () => {
-    if (!email || !password) { setError('Rellena todos los campos'); return; }
+    if (!email || !password) { setError(t('login.fillFields')); return; }
     setLoading(true);
     setError('');
     try {
       await login(email.trim(), password);
-      // La redirección la gestiona el useEffect de _layout.tsx que observa `user`
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Credenciales incorrectas');
+      setError(e instanceof Error ? e.message : t('login.wrongCredentials'));
     } finally {
       setLoading(false);
     }
@@ -58,9 +59,8 @@ export default function LoginScreen() {
     setError('');
     try {
       await loginWithGoogle();
-      // La redirección la gestiona el useEffect de _layout.tsx que observa `user`
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al iniciar sesión con Google');
+      setError(e instanceof Error ? e.message : t('login.googleError'));
     } finally {
       setGoogleLoading(false);
     }
@@ -83,7 +83,7 @@ export default function LoginScreen() {
             resizeMode="contain"
             accessibilityLabel="LifeVault"
           />
-          <Text style={[styles.subtitle, { color: colors.textMuted }]}>Tu bóveda personal de conocimiento</Text>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t('login.subtitle')}</Text>
         </Animated.View>
 
         {/* Form */}
@@ -92,7 +92,7 @@ export default function LoginScreen() {
           style={styles.form}
         >
           <Input
-            label="Email"
+            label={t('login.email')}
             value={email}
             onChangeText={setEmail}
             placeholder="tu@email.com"
@@ -102,7 +102,7 @@ export default function LoginScreen() {
             textContentType="emailAddress"
           />
           <Input
-            label="Contraseña"
+            label={t('login.password')}
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••"
@@ -112,7 +112,7 @@ export default function LoginScreen() {
           />
           {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
           <Button
-            label="Entrar"
+            label={t('login.enter')}
             onPress={handleLogin}
             loading={loading}
             size="lg"
@@ -135,12 +135,12 @@ export default function LoginScreen() {
             }}
             disabled={googleLoading}
             accessibilityRole="button"
-            accessibilityLabel="Continuar con Google"
+            accessibilityLabel={t('login.continueWithGoogle')}
             style={[styles.googleButton, { backgroundColor: colors.surface, borderColor: colors.border }, googleAnimStyle]}
           >
             <Text style={styles.googleIcon}>G</Text>
             <Text style={[styles.googleText, { color: colors.text }]}>
-              {googleLoading ? 'Conectando...' : 'Continuar con Google'}
+              {googleLoading ? t('login.connecting') : t('login.continueWithGoogle')}
             </Text>
           </AnimatedPressable>
         </Animated.View>
@@ -150,9 +150,9 @@ export default function LoginScreen() {
           entering={FadeInUp.duration(500).delay(300).easing(Easing.out(Easing.quad))}
           style={styles.footer}
         >
-          <Text style={[styles.footerText, { color: colors.textMuted }]}>¿No tienes cuenta? </Text>
+          <Text style={[styles.footerText, { color: colors.textMuted }]}>{t('login.noAccount')} </Text>
           <Link href="/(auth)/register" style={[styles.footerLink, { color: colors.primary }]}>
-            Regístrate
+            {t('login.register')}
           </Link>
         </Animated.View>
       </KeyboardAvoidingView>

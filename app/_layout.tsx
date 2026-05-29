@@ -11,6 +11,7 @@ import { useFonts,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { useAuthStore } from '../store/auth.store';
 import { useThemeStore } from '../store/theme.store';
+import { useI18nStore } from '../store/i18n.store';
 import { useResolvedTheme } from '../constants/colors';
 import { Spinner } from '../components/ui/Spinner';
 import { ToastProvider } from '../lib/toast';
@@ -19,6 +20,7 @@ import '../global.css';
 export default function RootLayout() {
   const { user, loading, initialize } = useAuthStore();
   const { initialize: initTheme } = useThemeStore();
+  const { initialize: initI18n } = useI18nStore();
   const segments = useSegments();
   const resolved = useResolvedTheme();
   const [fontsLoaded] = useFonts({
@@ -32,6 +34,7 @@ export default function RootLayout() {
   useEffect(() => {
     initialize();
     initTheme();
+    initI18n();
   }, []);
 
   useEffect(() => {
