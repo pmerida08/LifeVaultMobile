@@ -138,5 +138,91 @@
     "langEsDesc": "Usar la aplicación en español",
     "langEn": "English",
     "langEnDesc": "Use the app in English"
+  },
+  "editProfile": {
+    "name": "Nombre",
+    "email": "Email",
+    "photo": "Cambiar foto",
+    "save": "Guardar cambios",
+    "saved": "Perfil actualizado",
+    "error": "Error al guardar el perfil",
+    "nameRequired": "El nombre no puede estar vacío",
+    "photoPermissionDenied": "Permiso denegado para acceder a la galería"
+  },
+  "changePassword": {
+    "newPassword": "Nueva contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "save": "Cambiar contraseña",
+    "success": "Contraseña actualizada correctamente",
+    "mismatch": "Las contraseñas no coinciden",
+    "tooShort": "Mínimo 6 caracteres",
+    "error": "Error al cambiar la contraseña",
+    "info": "Recibirás un email de confirmación. La nueva contraseña se aplica tras confirmarla."
+  },
+  "subscription": {
+    "currentPlan": "Tu plan actual",
+    "free": "Free",
+    "premium": "Premium",
+    "family": "Family",
+    "freePrice": "Gratis",
+    "premiumPrice": "4,99 €/mes",
+    "popular": "Popular",
+    "upgrade": "Mejorar a Premium",
+    "comingSoon": "Los pagos estarán disponibles próximamente",
+    "freeVault": "Bóveda de documentos (hasta 100 MB)",
+    "freeAssistant": "Asistente IA (10 consultas/día)",
+    "freePlanner": "Planner básico",
+    "premiumUnlimited": "Almacenamiento ilimitado",
+    "premiumSearch": "Búsqueda semántica avanzada",
+    "premiumPriority": "Asistente IA sin límites",
+    "premiumBackup": "Copia de seguridad automática"
+  },
+  "notifications": {
+    "push": "Notificaciones push",
+    "pushDesc": "Recibir alertas y recordatorios",
+    "reminders": "Recordatorios",
+    "tasks": "Recordatorios de tareas",
+    "events": "Recordatorios de eventos",
+    "permissionDenied": "Permiso denegado. Actívalo en los Ajustes del sistema."
+  },
+  "privacy": {
+    "lastUpdated": "Última actualización: mayo 2025",
+    "s1Title": "1. Información que recopilamos",
+    "s1Body": "Recopilamos únicamente la información necesaria para operar el servicio: dirección de email, nombre de perfil y los documentos que tú subes voluntariamente a tu bóveda personal.",
+    "s2Title": "2. Uso de la información",
+    "s2Body": "Tu información se utiliza exclusivamente para proporcionar las funcionalidades de LifeVault. No vendemos ni compartimos tus datos con terceros.",
+    "s3Title": "3. Almacenamiento y seguridad",
+    "s3Body": "Todos los datos se almacenan con cifrado en reposo (AES-256) y en tránsito (TLS 1.3). El acceso está protegido por políticas RLS de Supabase.",
+    "s4Title": "4. Asistente IA",
+    "s4Body": "Las consultas al asistente se procesan mediante modelos de lenguaje. El contenido puede enviarse temporalmente a los proveedores de IA para generar respuestas. No se usa para entrenar modelos.",
+    "s5Title": "5. Tus derechos",
+    "s5Body": "Puedes solicitar la exportación o eliminación de todos tus datos contactando con soporte. Tienes derecho de acceso, rectificación y supresión conforme al RGPD.",
+    "s6Title": "6. Cambios en esta política",
+    "s6Body": "Notificaremos cambios significativos mediante un aviso en la aplicación con al menos 30 días de antelación.",
+    "contact": "¿Preguntas? Escríbenos a soporte@lifevault.app"
+  },
+  "helpFaq": {
+    "subtitle": "Respuestas a las preguntas más frecuentes sobre LifeVault.",
+    "q1": "¿Cómo subo un documento a mi bóveda?",
+    "a1": "Ve a la pestaña Bóveda y pulsa el botón '+'. Selecciona el archivo desde tu dispositivo y espera a que se procese automáticamente.",
+    "q2": "¿Puedo buscar dentro del contenido de mis documentos?",
+    "a2": "Sí. El Asistente IA puede buscar y responder preguntas sobre el contenido de tus documentos. Usa la pestaña Asistente para hacer consultas.",
+    "q3": "¿Mis documentos están seguros?",
+    "a3": "Todos los archivos se almacenan cifrados en Supabase Storage. Solo tú tienes acceso gracias a las políticas de seguridad RLS.",
+    "q4": "¿Cómo sincronizo con Google Calendar y Tasks?",
+    "a4": "Ve a la pestaña Planner, pulsa el botón de sincronización y autoriza el acceso a tu cuenta de Google. La sincronización es bidireccional.",
+    "q5": "¿Puedo cambiar el idioma de la aplicación?",
+    "a5": "Sí. Ve a Ajustes → Idioma y selecciona Español o English.",
+    "q6": "¿Cómo elimino mi cuenta?",
+    "a6": "La eliminación de cuenta se gestiona manualmente. Escríbenos a soporte@lifevault.app y procesaremos la solicitud en 48h.",
+    "contact": "¿No encontraste tu respuesta?",
+    "email": "soporte@lifevault.app"
+  },
+  "about": {
+    "version": "Versión",
+    "tagline": "Tu bóveda personal de documentos e inteligencia artificial",
+    "description": "LifeVault Mobile es la versión para Android e iOS de LifeVault, diseñada para que tengas acceso seguro a tus documentos, un asistente IA y tu planificador personal, en cualquier lugar.",
+    "builtWith": "Construido con",
+    "credits": "Desarrollado por Pablo Merida\n© 2025 LifeVault. Todos los derechos reservados."
   }
 }

@@ -20,6 +20,7 @@ interface AuthStore {
   register: (email: string, password: string, name: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 async function upsertProfile(userId: string, email: string, name: string, avatarUrl?: string) {
@@ -114,5 +115,16 @@ export const useAuthStore = create<AuthStore>((set) => ({
     await supabase.auth.signOut();
     try { await GoogleSignin.signOut(); } catch (_) {}
     // user: null lo gestiona onAuthStateChange — no duplicar el set
+  },
+
+  refreshProfile: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+    const { data: profile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+    if (profile) set({ user: profile });
   },
 }));

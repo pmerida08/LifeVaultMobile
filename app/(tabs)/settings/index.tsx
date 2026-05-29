@@ -12,14 +12,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { useAuthStore } from '../../store/auth.store';
-import { useThemeStore, ThemePreference } from '../../store/theme.store';
-import { useI18nStore, useT, LangPreference } from '../../store/i18n.store';
-import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
-import { Button } from '../../components/ui/Button';
-import { useThemeColors } from '../../constants/colors';
-import { useToast } from '../../lib/toast';
+import { useAuthStore } from '../../../store/auth.store';
+import { useThemeStore, ThemePreference } from '../../../store/theme.store';
+import { useI18nStore, useT, LangPreference } from '../../../store/i18n.store';
+import { Card } from '../../../components/ui/Card';
+import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../components/ui/Button';
+import { useThemeColors } from '../../../constants/colors';
+import { useToast } from '../../../lib/toast';
 
 const PLAN_VARIANTS: Record<string, 'muted' | 'primary' | 'success'> = {
   free: 'muted',
@@ -199,11 +199,23 @@ export default function SettingsScreen() {
         <Animated.View entering={FadeInDown.duration(400).delay(120)} style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>{t('settings.accountSection')}</Text>
           <Card style={styles.menuCard}>
-            <MenuItem icon="person-outline" label={t('settings.editProfile')} />
+            <MenuItem
+              icon="person-outline"
+              label={t('settings.editProfile')}
+              onPress={() => router.push('/(tabs)/settings/edit-profile')}
+            />
             <Separator />
-            <MenuItem icon="key-outline" label={t('settings.changePassword')} />
+            <MenuItem
+              icon="key-outline"
+              label={t('settings.changePassword')}
+              onPress={() => router.push('/(tabs)/settings/change-password')}
+            />
             <Separator />
-            <MenuItem icon="card-outline" label={t('settings.subscription')} />
+            <MenuItem
+              icon="card-outline"
+              label={t('settings.subscription')}
+              onPress={() => router.push('/(tabs)/settings/subscription')}
+            />
           </Card>
         </Animated.View>
 
@@ -211,7 +223,11 @@ export default function SettingsScreen() {
         <Animated.View entering={FadeInDown.duration(400).delay(160)} style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>{t('settings.appSection')}</Text>
           <Card style={styles.menuCard}>
-            <MenuItem icon="notifications-outline" label={t('settings.notifications')} />
+            <MenuItem
+              icon="notifications-outline"
+              label={t('settings.notifications')}
+              onPress={() => router.push('/(tabs)/settings/notifications')}
+            />
             <Separator />
             <MenuItem
               icon="moon-outline"
@@ -225,7 +241,11 @@ export default function SettingsScreen() {
               onPress={() => setLanguageVisible(true)}
             />
             <Separator />
-            <MenuItem icon="shield-outline" label={t('settings.privacy')} />
+            <MenuItem
+              icon="shield-outline"
+              label={t('settings.privacy')}
+              onPress={() => router.push('/(tabs)/settings/privacy')}
+            />
           </Card>
         </Animated.View>
 
@@ -233,9 +253,17 @@ export default function SettingsScreen() {
         <Animated.View entering={FadeInDown.duration(400).delay(200)} style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>{t('settings.supportSection')}</Text>
           <Card style={styles.menuCard}>
-            <MenuItem icon="help-circle-outline" label={t('settings.helpFaq')} />
+            <MenuItem
+              icon="help-circle-outline"
+              label={t('settings.helpFaq')}
+              onPress={() => router.push('/(tabs)/settings/help-faq')}
+            />
             <Separator />
-            <MenuItem icon="information-circle-outline" label={t('settings.about')} />
+            <MenuItem
+              icon="information-circle-outline"
+              label={t('settings.about')}
+              onPress={() => router.push('/(tabs)/settings/about')}
+            />
           </Card>
         </Animated.View>
 

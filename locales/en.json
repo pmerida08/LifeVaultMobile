@@ -138,5 +138,91 @@
     "langEsDesc": "Usar la aplicación en español",
     "langEn": "English",
     "langEnDesc": "Use the app in English"
+  },
+  "editProfile": {
+    "name": "Name",
+    "email": "Email",
+    "photo": "Change photo",
+    "save": "Save changes",
+    "saved": "Profile updated",
+    "error": "Error saving profile",
+    "nameRequired": "Name cannot be empty",
+    "photoPermissionDenied": "Permission denied to access gallery"
+  },
+  "changePassword": {
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "save": "Change password",
+    "success": "Password updated successfully",
+    "mismatch": "Passwords don't match",
+    "tooShort": "Minimum 6 characters",
+    "error": "Error changing password",
+    "info": "You'll receive a confirmation email. The new password takes effect after confirmation."
+  },
+  "subscription": {
+    "currentPlan": "Your current plan",
+    "free": "Free",
+    "premium": "Premium",
+    "family": "Family",
+    "freePrice": "Free",
+    "premiumPrice": "€4.99/month",
+    "popular": "Popular",
+    "upgrade": "Upgrade to Premium",
+    "comingSoon": "Payments will be available soon",
+    "freeVault": "Document vault (up to 100 MB)",
+    "freeAssistant": "AI Assistant (10 queries/day)",
+    "freePlanner": "Basic planner",
+    "premiumUnlimited": "Unlimited storage",
+    "premiumSearch": "Advanced semantic search",
+    "premiumPriority": "Unlimited AI Assistant",
+    "premiumBackup": "Automatic backup"
+  },
+  "notifications": {
+    "push": "Push notifications",
+    "pushDesc": "Receive alerts and reminders",
+    "reminders": "Reminders",
+    "tasks": "Task reminders",
+    "events": "Event reminders",
+    "permissionDenied": "Permission denied. Enable it in system Settings."
+  },
+  "privacy": {
+    "lastUpdated": "Last updated: May 2025",
+    "s1Title": "1. Information We Collect",
+    "s1Body": "We collect only the information necessary to operate the service: your email address, profile name, and the documents you voluntarily upload to your personal vault.",
+    "s2Title": "2. Use of Information",
+    "s2Body": "Your information is used solely to provide LifeVault's features. We do not sell or share your data with third parties.",
+    "s3Title": "3. Storage & Security",
+    "s3Body": "All data is stored with encryption at rest (AES-256) and in transit (TLS 1.3). Access is protected by Supabase Row Level Security policies.",
+    "s4Title": "4. AI Assistant",
+    "s4Body": "Assistant queries are processed using language models. Content may be temporarily sent to AI providers to generate responses. It is not used for model training.",
+    "s5Title": "5. Your Rights",
+    "s5Body": "You can request the export or deletion of all your data at any time by contacting support. You have the right to access, rectify, and erase your data under GDPR.",
+    "s6Title": "6. Changes to This Policy",
+    "s6Body": "We will notify you of significant changes via an in-app notice at least 30 days in advance.",
+    "contact": "Questions? Contact us at support@lifevault.app"
+  },
+  "helpFaq": {
+    "subtitle": "Answers to the most common questions about LifeVault.",
+    "q1": "How do I upload a document to my vault?",
+    "a1": "Go to the Vault tab and tap the '+' button. Select a file from your device and wait for it to be processed automatically.",
+    "q2": "Can I search within my documents?",
+    "a2": "Yes. The AI Assistant can search and answer questions about your document content. Use the Assistant tab to query your vault.",
+    "q3": "Are my documents secure?",
+    "a3": "All files are stored encrypted in Supabase Storage. Only you can access your vault thanks to RLS security policies.",
+    "q4": "How do I sync with Google Calendar and Tasks?",
+    "a4": "Go to the Planner tab, tap the sync button, and authorize access to your Google account. Sync is bidirectional.",
+    "q5": "Can I change the app language?",
+    "a5": "Yes. Go to Settings → Language and select English or Español.",
+    "q6": "How do I delete my account?",
+    "a6": "Account deletion is handled manually. Email us at support@lifevault.app and we'll process your request within 48h.",
+    "contact": "Didn't find your answer?",
+    "email": "support@lifevault.app"
+  },
+  "about": {
+    "version": "Version",
+    "tagline": "Your personal document vault and AI assistant",
+    "description": "LifeVault Mobile is the Android and iOS version of LifeVault, designed to give you secure access to your documents, an AI assistant, and your personal planner — anywhere.",
+    "builtWith": "Built with",
+    "credits": "Developed by Pablo Merida\n© 2025 LifeVault. All rights reserved."
   }
 }
