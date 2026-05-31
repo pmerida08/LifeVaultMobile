@@ -46,7 +46,12 @@ const EVENT_COLORS = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDisplay(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-ES', {
+  const d = new Date(iso);
+  const hasTime = d.getHours() !== 0 || d.getMinutes() !== 0;
+  if (!hasTime) {
+    return d.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+  }
+  return d.toLocaleDateString('es-ES', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',

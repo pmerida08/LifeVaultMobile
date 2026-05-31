@@ -76,7 +76,7 @@ export default function EditProfileScreen() {
         const mimeType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
 
         const base64 = await FileSystem.readAsStringAsync(avatarUri, {
-          encoding: FileSystem.EncodingType.Base64,
+          encoding: 'base64' as any,
         });
         const binaryString = atob(base64);
         const bytes = new Uint8Array(binaryString.length);

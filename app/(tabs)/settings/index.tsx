@@ -7,6 +7,7 @@ import {
   ScrollView,
   Modal,
   Pressable,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -184,9 +185,13 @@ export default function SettingsScreen() {
         {/* Profile card */}
         <Animated.View entering={FadeInDown.duration(400).delay(60)}>
           <Card elevated style={styles.profileCard}>
-            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-              <Text style={[styles.avatarText, { color: colors.white }]}>{initials}</Text>
-            </View>
+            {user.avatar_url ? (
+              <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }]}>
+                <Text style={[styles.avatarText, { color: colors.white }]}>{initials}</Text>
+              </View>
+            )}
             <View style={styles.profileInfo}>
               <Text style={[styles.name, { color: colors.text }]}>{user.name}</Text>
               <Text style={[styles.email, { color: colors.textMuted }]}>{user.email}</Text>
