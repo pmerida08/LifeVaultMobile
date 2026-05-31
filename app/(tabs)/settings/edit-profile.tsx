@@ -29,8 +29,12 @@ export default function EditProfileScreen() {
   const { user, refreshProfile } = useAuthStore();
 
   const [name, setName] = useState(user?.name ?? '');
-  const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatar_url ?? null);
+  // avatarUri: URI local seleccionada. null = sin cambio (usar avatar_url de Supabase)
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // La imagen que se muestra en pantalla (local si hay nueva, remota si no)
+  const displayAvatar = avatarUri ?? user?.avatar_url ?? null;
 
   const initials = name
     .split(' ')
@@ -70,12 +74,14 @@ export default function EditProfileScreen() {
     try {
       let uploadedUrl: string | undefined;
 
-      if (avatarUri && avatarUri !== user?.avatar_url) {
-        const ext = (avatarUri.split('.').pop() ?? 'jpg').split('?')[0];
-        const path = `${user!.id}/avatar.${ext}`;
-        const mimeType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+      if (avatarUri) {
+        // En Android, expo-image-picker puede devolver content:// URIs que
+        // FileSystem.readAsStringAsync no siempre puede leer. Copiamos al
+        // directorio de caché primero para obtener un file:// URI garantizado.
+        const localUri = `${FileSystem.cacheDirectory}avatar_upload.jpg`;
+        await FileSystem.copyAsync({ from: avatarUri, to: localUri });
 
-        const base64 = await FileSystem.readAsStringAsync(avatarUri, {
+        const base64 = await FileSystem.readAsStringAsync(localUri, {
           encoding: 'base64' as any,
         });
         const binaryString = atob(base64);
@@ -84,25 +90,31 @@ export default function EditProfileScreen() {
           bytes[i] = binaryString.charCodeAt(i);
         }
 
+        const path = `${user!.id}/avatar.jpg`;
         const { error: uploadError } = await supabase.storage
           .from('lifevault-documents')
-          .upload(path, bytes, { contentType: mimeType, upsert: true });
-        if (uploadError) throw uploadError;
+          .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
+        if (uploadError) throw new Error(`Upload: ${uploadError.message}`);
 
         const { data: urlData } = supabase.storage
           .from('lifevault-documents')
           .getPublicUrl(path);
         uploadedUrl = urlData.publicUrl;
+
+        // Limpiar caché temporal
+        FileSystem.deleteAsync(localUri, { idempotent: true }).catch(() => {});
       }
 
-      await supabase.from('users').update({
+      const { error: updateError } = await supabase.from('users').update({
         name: name.trim(),
         ...(uploadedUrl ? { avatar_url: uploadedUrl } : {}),
       }).eq('id', user!.id);
+      if (updateError) throw new Error(`DB: ${updateError.message}`);
 
       await refreshProfile();
       showToast(t('editProfile.saved'), 'success');
-    } catch {
+    } catch (e) {
+      console.error('[EditProfile] handleSave error:', e);
       showToast(t('editProfile.error'), 'error');
     } finally {
       setLoading(false);
@@ -120,8 +132,8 @@ export default function EditProfileScreen() {
           {/* Avatar */}
           <Animated.View entering={FadeInDown.duration(400)} style={styles.avatarSection}>
             <TouchableOpacity onPress={pickImage} activeOpacity={0.8} style={styles.avatarWrapper}>
-              {avatarUri ? (
-                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+              {displayAvatar ? (
+                <Image source={{ uri: displayAvatar }} style={styles.avatarImage} />
               ) : (
                 <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
                   <Text style={[styles.initials, { color: colors.white }]}>{initials}</Text>
