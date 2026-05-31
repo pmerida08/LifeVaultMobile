@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuthStore } from '../../../store/auth.store';
 import { useThemeColors } from '../../../constants/colors';
