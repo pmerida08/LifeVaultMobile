@@ -96,10 +96,13 @@ export default function EditProfileScreen() {
           .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
         if (uploadError) throw new Error(`Upload: ${uploadError.message}`);
 
-        const { data: urlData } = supabase.storage
+        // El bucket es privado → necesitamos signed URL para que Image la cargue.
+        // 1 año de validez (31536000 s). Si caduca, el usuario puede cambiar la foto.
+        const { data: signedData, error: signedError } = await supabase.storage
           .from('lifevault-documents')
-          .getPublicUrl(path);
-        uploadedUrl = urlData.publicUrl;
+          .createSignedUrl(path, 60 * 60 * 24 * 365);
+        if (signedError) throw new Error(`SignedUrl: ${signedError.message}`);
+        uploadedUrl = signedData!.signedUrl;
 
         // Limpiar caché temporal
         FileSystem.deleteAsync(localUri, { idempotent: true }).catch(() => {});
