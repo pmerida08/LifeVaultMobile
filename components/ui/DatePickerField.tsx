@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker, {
+  DateTimePickerEvent,
+  DateTimePickerAndroid,
+} from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../constants/colors';
 
@@ -19,28 +22,54 @@ function formatDate(date: Date): string {
 
 export function DatePickerField({ label, value, onChange, placeholder, minimumDate }: DatePickerFieldProps) {
   const colors = useThemeColors();
-  const [show, setShow] = useState(false);
+  // Solo necesario en iOS
+  const [showIOS, setShowIOS] = useState(false);
 
-  const handleChange = (_: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') setShow(false);
-    if (selectedDate) onChange(selectedDate);
+  const openPicker = () => {
+    if (Platform.OS === 'android') {
+      // Paso 1: seleccionar fecha
+      DateTimePickerAndroid.open({
+        value: value ?? new Date(),
+        mode: 'date',
+        minimumDate,
+        onChange: (_: DateTimePickerEvent, selectedDate?: Date) => {
+          if (!selectedDate) return;
+          // Paso 2: seleccionar hora con la fecha ya elegida
+          DateTimePickerAndroid.open({
+            value: selectedDate,
+            mode: 'time',
+            is24Hour: true,
+            onChange: (_2: DateTimePickerEvent, selectedTime?: Date) => {
+              if (selectedTime) onChange(selectedTime);
+            },
+          });
+        },
+      });
+    } else {
+      setShowIOS(true);
+    }
   };
 
   const handleClear = () => {
     onChange(undefined);
-    setShow(false);
+    setShowIOS(false);
+  };
+
+  // iOS: onChange inline
+  const handleIOSChange = (_: DateTimePickerEvent, selectedDate?: Date) => {
+    if (selectedDate) onChange(selectedDate);
   };
 
   return (
     <View style={styles.container}>
       <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
       <TouchableOpacity
-        onPress={() => setShow(true)}
+        onPress={openPicker}
         style={[
           styles.trigger,
           {
             backgroundColor: colors.background,
-            borderColor: show ? colors.primary : colors.border,
+            borderColor: showIOS ? colors.primary : colors.border,
           },
         ]}
         activeOpacity={0.7}
@@ -50,12 +79,7 @@ export function DatePickerField({ label, value, onChange, placeholder, minimumDa
           size={16}
           color={value ? colors.primary : colors.textMuted}
         />
-        <Text
-          style={[
-            styles.triggerText,
-            { color: value ? colors.text : colors.textMuted },
-          ]}
-        >
+        <Text style={[styles.triggerText, { color: value ? colors.text : colors.textMuted }]}>
           {value ? formatDate(value) : (placeholder ?? 'Seleccionar fecha')}
         </Text>
         {value && (
@@ -65,25 +89,25 @@ export function DatePickerField({ label, value, onChange, placeholder, minimumDa
         )}
       </TouchableOpacity>
 
-      {show && (
-        <DateTimePicker
-          value={value ?? new Date()}
-          mode="datetime"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleChange}
-          minimumDate={minimumDate}
-          locale="es-ES"
-          themeVariant="light"
-          accentColor={colors.primary}
-        />
-      )}
-      {show && Platform.OS === 'ios' && (
-        <TouchableOpacity
-          onPress={() => setShow(false)}
-          style={[styles.iosDone, { backgroundColor: colors.primary }]}
-        >
-          <Text style={[styles.iosDoneText, { color: colors.white }]}>Listo</Text>
-        </TouchableOpacity>
+      {/* iOS: picker inline */}
+      {Platform.OS === 'ios' && showIOS && (
+        <>
+          <DateTimePicker
+            value={value ?? new Date()}
+            mode="datetime"
+            display="spinner"
+            onChange={handleIOSChange}
+            minimumDate={minimumDate}
+            locale="es-ES"
+            accentColor={colors.primary}
+          />
+          <TouchableOpacity
+            onPress={() => setShowIOS(false)}
+            style={[styles.iosDone, { backgroundColor: colors.primary }]}
+          >
+            <Text style={[styles.iosDoneText, { color: colors.white }]}>Listo</Text>
+          </TouchableOpacity>
+        </>
       )}
     </View>
   );
