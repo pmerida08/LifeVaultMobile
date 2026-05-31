@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImagePicker from 'expo-image-picker';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuthStore } from '../../../store/auth.store';
 import { useThemeColors } from '../../../constants/colors';
@@ -45,7 +46,6 @@ export default function EditProfileScreen() {
 
   const pickImage = async () => {
     try {
-      const ImagePicker = await import('expo-image-picker');
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         showToast(t('editProfile.photoPermissionDenied'), 'error');

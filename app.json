@@ -2,7 +2,7 @@
   "expo": {
     "name": "LifeVault",
     "slug": "lifevaultmobile",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "lifevault",
@@ -23,7 +23,8 @@
         "backgroundColor": "#FFFFFF"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.pablo.lifevaultmobile"
+      "package": "com.pablo.lifevaultmobile",
+      "versionCode": 2
     },
     "web": {
       "bundler": "metro",

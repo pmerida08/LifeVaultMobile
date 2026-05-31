@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
-import DateTimePicker, {
-  DateTimePickerEvent,
-  DateTimePickerAndroid,
-} from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../constants/colors';
+import { useI18nStore } from '../../store/i18n.store';
+import { useThemeStore } from '../../store/theme.store';
+import { CustomDateTimePicker } from './CustomDateTimePicker';
 
 interface DatePickerFieldProps {
   label: string;
@@ -17,43 +17,20 @@ interface DatePickerFieldProps {
 
 function formatDate(date: Date): string {
   const p = (n: number) => n.toString().padStart(2, '0');
-  return `${date.getDate()} ${date.toLocaleString('es-ES', { month: 'short' })} ${date.getFullYear()}  ${p(date.getHours())}:${p(date.getMinutes())}`;
+  const lang = 'es-ES';
+  return `${date.getDate()} ${date.toLocaleString(lang, { month: 'short' })} ${date.getFullYear()}  ${p(date.getHours())}:${p(date.getMinutes())}`;
 }
 
 export function DatePickerField({ label, value, onChange, placeholder, minimumDate }: DatePickerFieldProps) {
   const colors = useThemeColors();
-  // Solo necesario en iOS
-  const [showIOS, setShowIOS] = useState(false);
+  const lang = useI18nStore((s) => s.lang);
+  const themePreference = useThemeStore((s) => s.theme);
+  const locale = lang === 'en' ? 'en-GB' : 'es-ES';
+  const themeVariant = themePreference === 'system' ? 'auto' : themePreference;
 
-  const openPicker = () => {
-    if (Platform.OS === 'android') {
-      // Paso 1: seleccionar fecha
-      DateTimePickerAndroid.open({
-        value: value ?? new Date(),
-        mode: 'date',
-        minimumDate,
-        onChange: (_: DateTimePickerEvent, selectedDate?: Date) => {
-          if (!selectedDate) return;
-          // Paso 2: seleccionar hora con la fecha ya elegida
-          DateTimePickerAndroid.open({
-            value: selectedDate,
-            mode: 'time',
-            is24Hour: true,
-            onChange: (_2: DateTimePickerEvent, selectedTime?: Date) => {
-              if (selectedTime) onChange(selectedTime);
-            },
-          });
-        },
-      });
-    } else {
-      setShowIOS(true);
-    }
-  };
+  const [showPicker, setShowPicker] = useState(false);
 
-  const handleClear = () => {
-    onChange(undefined);
-    setShowIOS(false);
-  };
+  const handleClear = () => onChange(undefined);
 
   // iOS: onChange inline
   const handleIOSChange = (_: DateTimePickerEvent, selectedDate?: Date) => {
@@ -64,12 +41,12 @@ export function DatePickerField({ label, value, onChange, placeholder, minimumDa
     <View style={styles.container}>
       <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
       <TouchableOpacity
-        onPress={openPicker}
+        onPress={() => setShowPicker(true)}
         style={[
           styles.trigger,
           {
             backgroundColor: colors.background,
-            borderColor: showIOS ? colors.primary : colors.border,
+            borderColor: showPicker ? colors.primary : colors.border,
           },
         ]}
         activeOpacity={0.7}
@@ -89,8 +66,17 @@ export function DatePickerField({ label, value, onChange, placeholder, minimumDa
         )}
       </TouchableOpacity>
 
-      {/* iOS: picker inline */}
-      {Platform.OS === 'ios' && showIOS && (
+      {/* Android: picker personalizado con colores y idioma de la app */}
+      {Platform.OS === 'android' && showPicker && (
+        <CustomDateTimePicker
+          value={value}
+          onChange={(date) => { onChange(date); setShowPicker(false); }}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
+
+      {/* iOS: picker nativo inline */}
+      {Platform.OS === 'ios' && showPicker && (
         <>
           <DateTimePicker
             value={value ?? new Date()}
@@ -98,14 +84,17 @@ export function DatePickerField({ label, value, onChange, placeholder, minimumDa
             display="spinner"
             onChange={handleIOSChange}
             minimumDate={minimumDate}
-            locale="es-ES"
+            locale={locale}
             accentColor={colors.primary}
+            themeVariant={themeVariant}
           />
           <TouchableOpacity
-            onPress={() => setShowIOS(false)}
+            onPress={() => setShowPicker(false)}
             style={[styles.iosDone, { backgroundColor: colors.primary }]}
           >
-            <Text style={[styles.iosDoneText, { color: colors.white }]}>Listo</Text>
+            <Text style={[styles.iosDoneText, { color: colors.white }]}>
+              {lang === 'en' ? 'Done' : 'Listo'}
+            </Text>
           </TouchableOpacity>
         </>
       )}

@@ -25,6 +25,35 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
 }
 
+function getDaysLeft(dateStr: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dateStr);
+  due.setHours(0, 0, 0, 0);
+  return Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function getDueColor(days: number): string {
+  if (days < 0) return '#EF4444';   // vencida — rojo
+  if (days <= 3) return '#F97316';  // urgente — naranja
+  if (days <= 7) return '#EAB308';  // próxima — amarillo
+  return '#22C55E';                  // tranquilo — verde
+}
+
+function formatCountdown(days: number): string {
+  if (days < 0) {
+    const abs = Math.abs(days);
+    return abs === 1 ? 'Venció ayer' : `Venció hace ${abs} días`;
+  }
+  if (days === 0) return 'Vence hoy';
+  if (days === 1) return 'Mañana';
+  if (days < 31) return `${days} días`;
+  const months = Math.floor(days / 30);
+  const rest = days % 30;
+  const mStr = months === 1 ? '1 mes' : `${months} meses`;
+  return rest > 0 ? `${mStr} y ${rest} día${rest > 1 ? 's' : ''}` : mStr;
+}
+
 export default function DashboardScreen() {
   const colors = useThemeColors();
   const t = useT();
@@ -125,10 +154,23 @@ export default function DashboardScreen() {
                 onPress={() => router.push({ pathname: '/(tabs)/planner', params: { editTaskId: task.id } })}
               >
                 <Card style={styles.taskCard}>
-                  <Text style={styles.taskTitle} numberOfLines={1}>{task.title}</Text>
-                  {task.due_date && (
-                    <Text style={styles.taskDue}>{t('dashboard.due')} {formatDate(task.due_date)}</Text>
-                  )}
+                  <View style={styles.taskRow}>
+                    <View style={styles.taskInfo}>
+                      <Text style={styles.taskTitle} numberOfLines={1}>{task.title}</Text>
+                      {task.due_date && (
+                        <Text style={styles.taskDue}>{t('dashboard.due')} {formatDate(task.due_date)}</Text>
+                      )}
+                    </View>
+                    {task.due_date && (() => {
+                      const days = getDaysLeft(task.due_date);
+                      const color = getDueColor(days);
+                      return (
+                        <View style={[styles.countdownBadge, { backgroundColor: color + '22', borderColor: color + '55' }]}>
+                          <Text style={[styles.countdownText, { color }]}>{formatCountdown(days)}</Text>
+                        </View>
+                      );
+                    })()}
+                  </View>
                 </Card>
               </TouchableOpacity>
             </Animated.View>
@@ -157,6 +199,15 @@ export default function DashboardScreen() {
                   <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
                   <Text style={styles.eventDate}>{formatDate(event.start_at)}</Text>
                 </View>
+                {(() => {
+                  const days = getDaysLeft(event.start_at);
+                  const color = getDueColor(days);
+                  return (
+                    <View style={[styles.countdownBadge, { backgroundColor: color + '22', borderColor: color + '55' }]}>
+                      <Text style={[styles.countdownText, { color }]}>{formatCountdown(days)}</Text>
+                    </View>
+                  );
+                })()}
               </Card>
             </Animated.View>
           ))
@@ -212,7 +263,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       fontWeight: '500',
     },
     section: {
-      gap: 8,
+      gap: 6,
     },
     sectionTitle: {
       fontSize: 17,
@@ -221,7 +272,18 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       marginBottom: 2,
     },
     taskCard: {
-      gap: 4,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+    },
+    taskRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+    taskInfo: {
+      flex: 1,
+      gap: 2,
     },
     taskTitle: {
       fontSize: 15,
@@ -231,7 +293,18 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     taskDue: {
       fontSize: 12,
       color: colors.textMuted,
-      marginLeft: 28,
+    },
+    countdownBadge: {
+      borderRadius: 8,
+      borderWidth: 1,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    countdownText: {
+      fontSize: 12,
+      fontWeight: '700',
     },
     eventCard: {
       flexDirection: 'row',

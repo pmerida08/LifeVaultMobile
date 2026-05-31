@@ -45,6 +45,35 @@ const EVENT_COLORS = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function getDaysLeft(dateStr: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dateStr);
+  due.setHours(0, 0, 0, 0);
+  return Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function getDueColor(days: number): string {
+  if (days < 0) return '#EF4444';
+  if (days <= 3) return '#F97316';
+  if (days <= 7) return '#EAB308';
+  return '#22C55E';
+}
+
+function formatCountdown(days: number): string {
+  if (days < 0) {
+    const abs = Math.abs(days);
+    return abs === 1 ? 'Venció ayer' : `Venció hace ${abs} días`;
+  }
+  if (days === 0) return 'Vence hoy';
+  if (days === 1) return 'Mañana';
+  if (days < 31) return `${days} días`;
+  const months = Math.floor(days / 30);
+  const rest = days % 30;
+  const mStr = months === 1 ? '1 mes' : `${months} meses`;
+  return rest > 0 ? `${mStr} y ${rest} día${rest > 1 ? 's' : ''}` : mStr;
+}
+
 function formatDisplay(iso: string): string {
   const d = new Date(iso);
   const hasTime = d.getHours() !== 0 || d.getMinutes() !== 0;
@@ -110,9 +139,20 @@ const TaskItem = React.memo(function TaskItem({
             {task.title}
           </Text>
           {task.due_date && (
-            <Text style={[styles.taskDue, { color: colors.textMuted }]}>
-              {dueLabel} {formatDisplay(task.due_date)}
-            </Text>
+            <View style={styles.taskDueRow}>
+              <Text style={[styles.taskDue, { color: colors.textMuted }]}>
+                {dueLabel} {formatDisplay(task.due_date)}
+              </Text>
+              {task.status !== 'done' && (() => {
+                const days = getDaysLeft(task.due_date!);
+                const color = getDueColor(days);
+                return (
+                  <View style={[styles.countdownBadge, { backgroundColor: color + '22', borderColor: color + '55' }]}>
+                    <Text style={[styles.countdownText, { color }]}>{formatCountdown(days)}</Text>
+                  </View>
+                );
+              })()}
+            </View>
           )}
         </View>
         <TouchableOpacity onPress={() => onEdit(task)} style={styles.actionBtn}>
@@ -143,7 +183,18 @@ const EventItem = React.memo(function EventItem({
       <View style={[styles.eventDot, { backgroundColor: event.color ?? colors.primary }]} />
       <View style={styles.eventContent}>
         <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={1}>{event.title}</Text>
-        <Text style={[styles.eventDate, { color: colors.textMuted }]}>{formatDisplay(event.start_at)}</Text>
+        <View style={styles.taskDueRow}>
+          <Text style={[styles.eventDate, { color: colors.textMuted }]}>{formatDisplay(event.start_at)}</Text>
+          {(() => {
+            const days = getDaysLeft(event.start_at);
+            const color = getDueColor(days);
+            return (
+              <View style={[styles.countdownBadge, { backgroundColor: color + '22', borderColor: color + '55' }]}>
+                <Text style={[styles.countdownText, { color }]}>{formatCountdown(days)}</Text>
+              </View>
+            );
+          })()}
+        </View>
       </View>
       <TouchableOpacity onPress={() => onEdit(event)} style={styles.actionBtn}>
         <Ionicons name="create-outline" size={16} color={colors.textMuted} />
@@ -217,6 +268,11 @@ function TaskModal({
           onChange={setDueDate}
           placeholder="Sin fecha límite"
         />
+        {isEdit && state.task.google_task_id && (
+          <Text style={[styles.googleNote, { color: colors.textMuted }]}>
+            La hora no está disponible en la API de Google Tasks. Puedes ajustarla aquí manualmente.
+          </Text>
+        )}
         <View style={styles.modalActions}>
           <Button label={t('planner.cancel')} variant="ghost" onPress={onClose} style={styles.modalBtn} />
           <Button
@@ -482,9 +538,16 @@ export default function PlannerScreen() {
     }
   }, [user, eventModal, updateEvent, createEvent, showToast]);
 
+  const sortByDate = (a: { due_date?: string | null }, b: { due_date?: string | null }) => {
+    if (!a.due_date && !b.due_date) return 0;
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+  };
+
   const grouped = (['todo', 'in_progress', 'done'] as StatusGroup[]).map((status) => ({
     status,
-    tasks: tasks.filter((task) => task.status === status),
+    tasks: tasks.filter((task) => task.status === status).sort(sortByDate),
   }));
 
   const isLoading = initialLoad && (tasksLoading || eventsLoading);
@@ -577,7 +640,7 @@ export default function PlannerScreen() {
                   <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t('planner.noEvents')}</Text>
                 </Card>
               ) : (
-                events.map((event, ei) => (
+                [...events].sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()).map((event, ei) => (
                   <Animated.View key={event.id} entering={FadeInUp.duration(300).delay(220 + ei * 40)}>
                     <EventItem
                       event={event}
@@ -672,6 +735,9 @@ const styles = StyleSheet.create({
   taskTitle: { fontSize: 15, fontWeight: '500' },
   taskTitleDone: { textDecorationLine: 'line-through' },
   taskDue: { fontSize: 12 },
+  taskDueRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  countdownBadge: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2 },
+  countdownText: { fontSize: 11, fontWeight: '700' },
   eventCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   eventDot: { width: 10, height: 10, borderRadius: 5 },
   eventContent: { flex: 1, gap: 2 },
@@ -706,4 +772,5 @@ const styles = StyleSheet.create({
   colorDot: { width: 28, height: 28, borderRadius: 14 },
   modalActions: { flexDirection: 'row', gap: 12 },
   modalBtn: { flex: 1 },
+  googleNote: { fontSize: 12, fontStyle: 'italic', marginTop: 4, marginBottom: 4 },
 });

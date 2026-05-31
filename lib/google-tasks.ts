@@ -15,6 +15,7 @@ export interface GoogleTask {
   notes?: string;
   status: 'needsAction' | 'completed';
   due?: string;
+  hasDueTime?: boolean;
 }
 
 async function getTaskListIds(): Promise<string[]> {

@@ -17,11 +17,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Colors } from '../../constants/colors';
+import { Colors, useThemeColors } from '../../constants/colors';
 import { useT } from '../../store/i18n.store';
 
 export default function RegisterScreen() {
   const t = useT();
+  const colors = useThemeColors();
   const { register } = useAuthStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -61,11 +62,12 @@ export default function RegisterScreen() {
           style={styles.header}
         >
           <Image
-            source={require('../../assets/logo.png')}
-            style={styles.wordmark}
+            source={require('../../assets/logo-icon.png')}
+            style={styles.logoIcon}
             resizeMode="contain"
             accessibilityLabel="LifeVault"
           />
+          <Text style={[styles.appName, { color: colors.primary }]}>LifeVault</Text>
           <Text style={styles.subtitle}>{t('register.title')}</Text>
         </Animated.View>
 
@@ -142,9 +144,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  wordmark: {
-    width: 220,
-    height: 110,
+  logoIcon: {
+    width: 130,
+    height: 130,
+  },
+  appName: {
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   subtitle: {
     fontSize: 15,

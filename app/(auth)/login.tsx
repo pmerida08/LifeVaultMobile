@@ -78,11 +78,12 @@ export default function LoginScreen() {
           style={styles.header}
         >
           <Image
-            source={require('../../assets/logo.png')}
-            style={styles.wordmark}
+            source={require('../../assets/logo-icon.png')}
+            style={styles.logoIcon}
             resizeMode="contain"
             accessibilityLabel="LifeVault"
           />
+          <Text style={[styles.appName, { color: colors.primary }]}>LifeVault</Text>
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t('login.subtitle')}</Text>
         </Animated.View>
 
@@ -175,9 +176,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  wordmark: {
-    width: 220,
-    height: 110,
+  logoIcon: {
+    width: 130,
+    height: 130,
+  },
+  appName: {
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   subtitle: {
     fontSize: 15,

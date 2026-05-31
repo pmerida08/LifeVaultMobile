@@ -6,6 +6,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '../../constants/colors';
 import { useT } from '../../store/i18n.store';
 
@@ -40,6 +41,9 @@ function TabIcon({ name, focused }: { name: IoniconName; focused: boolean }) {
 export default function TabsLayout() {
   const colors = useThemeColors();
   const t = useT();
+  const insets = useSafeAreaInsets();
+
+  const tabBarHeight = 64 + insets.bottom;
 
   return (
     <Tabs
@@ -54,8 +58,8 @@ export default function TabsLayout() {
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.10,
           shadowRadius: 16,
-          height: 64,
-          paddingBottom: 10,
+          height: tabBarHeight,
+          paddingBottom: insets.bottom + 6,
           paddingTop: 6,
         },
         tabBarActiveTintColor: colors.primary,
