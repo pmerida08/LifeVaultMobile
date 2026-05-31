@@ -7,19 +7,22 @@ import {
   StyleSheet,
   ScrollView,
   Switch,
-  TextInput as RNTextInput,
+  Pressable,
+  Alert,
   RefreshControl,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '../../store/auth.store';
 import { useTasksStore } from '../../store/tasks.store';
 import { useEventsStore } from '../../store/events.store';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { DatePickerField } from '../../components/ui/DatePickerField';
 import { SkeletonPlanner } from '../../components/ui/Skeleton';
 import { GoogleConnectButton } from '../../components/GoogleConnectButton';
 import { useThemeColors } from '../../constants/colors';
@@ -35,32 +38,12 @@ type StatusGroup = 'todo' | 'in_progress' | 'done';
 type TaskModalState = null | { mode: 'create' } | { mode: 'edit'; task: Task };
 type EventModalState = null | { mode: 'create' } | { mode: 'edit'; event: CalendarEvent };
 
-const PRIORITY_VARIANTS: Record<Task['priority'], 'danger' | 'warning' | 'success'> = {
-  high: 'danger',
-  medium: 'warning',
-  low: 'success',
-};
-
 const EVENT_COLORS = [
   '#3730AB', '#10b981', '#f59e0b', '#ef4444',
   '#8b5cf6', '#06b6d4', '#f97316', '#ec4899',
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function parseDateInput(str: string): string | undefined {
-  if (!str.trim()) return undefined;
-  const normalized = str.includes('T') ? str : str.replace(' ', 'T');
-  const d = new Date(normalized);
-  return isNaN(d.getTime()) ? undefined : d.toISOString();
-}
-
-function formatDateInput(iso?: string): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const p = (n: number) => n.toString().padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-}
 
 function formatDisplay(iso: string): string {
   return new Date(iso).toLocaleDateString('es-ES', {
@@ -183,8 +166,9 @@ function TaskModal({
   const isEdit = state.mode === 'edit';
   const [title, setTitle] = useState(isEdit ? state.task.title : '');
   const [description, setDescription] = useState(isEdit ? (state.task.description ?? '') : '');
-  const [priority, setPriority] = useState<Task['priority']>(isEdit ? state.task.priority : 'medium');
-  const [dueDate, setDueDate] = useState(isEdit ? formatDateInput(state.task.due_date) : '');
+  const [dueDate, setDueDate] = useState<Date | undefined>(
+    isEdit && state.task.due_date ? new Date(state.task.due_date) : undefined
+  );
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -193,68 +177,53 @@ function TaskModal({
     await onSubmit({
       title: title.trim(),
       description: description.trim() || undefined,
-      priority,
-      due_date: parseDateInput(dueDate),
+      priority: isEdit ? state.task.priority : 'medium',
+      due_date: dueDate?.toISOString(),
     });
     setLoading(false);
     onClose();
   };
 
-  const priorities: Task['priority'][] = ['low', 'medium', 'high'];
-
   return (
-    <View style={[styles.modal, { backgroundColor: colors.surface }]}>
-      <Text style={[styles.modalTitle, { color: colors.text }]}>{isEdit ? t('planner.editTask') : t('planner.newTask')}</Text>
-      <Input
-        label={t('planner.fieldTitle')}
-        value={title}
-        onChangeText={setTitle}
-        placeholder={`${t('planner.fieldTitle')}...`}
-        autoFocus
-      />
-      <Input
-        label={t('planner.fieldDescription')}
-        value={description}
-        onChangeText={setDescription}
-        placeholder="Notas..."
-      />
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.priority')}</Text>
-      <View style={styles.chipRow}>
-        {priorities.map((p) => (
-          <TouchableOpacity
-            key={p}
-            onPress={() => setPriority(p)}
-            style={[
-              styles.chip,
-              { backgroundColor: priority === p ? colors.primary : colors.background },
-            ]}
-          >
-            <Text style={[styles.chipText, { color: priority === p ? colors.white : colors.textMuted }]}>
-              {p === 'low' ? t('planner.priorityLow') : p === 'medium' ? t('planner.priorityMedium') : t('planner.priorityHigh')}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.dueDate')}</Text>
-      <RNTextInput
-        style={[styles.dateInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-        value={dueDate}
-        onChangeText={setDueDate}
-        placeholder={t('planner.dateFormat')}
-        placeholderTextColor={colors.textMuted}
-        keyboardType="numbers-and-punctuation"
-      />
-      <View style={styles.modalActions}>
-        <Button label={t('planner.cancel')} variant="ghost" onPress={onClose} style={styles.modalBtn} />
-        <Button
-          label={isEdit ? t('planner.save') : t('planner.create')}
-          onPress={handleSubmit}
-          loading={loading}
-          disabled={!title.trim()}
-          style={styles.modalBtn}
+    <Pressable style={styles.modalOverlay} onPress={onClose}>
+      <Pressable
+        style={[styles.modal, { backgroundColor: colors.surface }]}
+        onPress={(e) => e.stopPropagation()}
+      >
+        <Text style={[styles.modalTitle, { color: colors.text }]}>
+          {isEdit ? t('planner.editTask') : t('planner.newTask')}
+        </Text>
+        <Input
+          label={t('planner.fieldTitle')}
+          value={title}
+          onChangeText={setTitle}
+          placeholder={`${t('planner.fieldTitle')}...`}
+          autoFocus
         />
-      </View>
-    </View>
+        <Input
+          label={t('planner.fieldDescription')}
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Notas..."
+        />
+        <DatePickerField
+          label={t('planner.dueDate')}
+          value={dueDate}
+          onChange={setDueDate}
+          placeholder="Sin fecha límite"
+        />
+        <View style={styles.modalActions}>
+          <Button label={t('planner.cancel')} variant="ghost" onPress={onClose} style={styles.modalBtn} />
+          <Button
+            label={isEdit ? t('planner.save') : t('planner.create')}
+            onPress={handleSubmit}
+            loading={loading}
+            disabled={!title.trim()}
+            style={styles.modalBtn}
+          />
+        </View>
+      </Pressable>
+    </Pressable>
   );
 }
 
@@ -264,37 +233,34 @@ function EventModal({
   state,
   onClose,
   onSubmit,
-  onError,
 }: {
   state: Exclude<EventModalState, null>;
   onClose: () => void;
   onSubmit: (data: Pick<CalendarEvent, 'title' | 'description' | 'start_at' | 'end_at' | 'all_day' | 'color'>) => Promise<void>;
-  onError: (msg: string) => void;
 }) {
   const colors = useThemeColors();
   const t = useT();
   const isEdit = state.mode === 'edit';
   const [title, setTitle] = useState(isEdit ? state.event.title : '');
   const [description, setDescription] = useState(isEdit ? (state.event.description ?? '') : '');
-  const [startAt, setStartAt] = useState(isEdit ? formatDateInput(state.event.start_at) : '');
-  const [endAt, setEndAt] = useState(isEdit ? formatDateInput(state.event.end_at) : '');
+  const [startAt, setStartAt] = useState<Date | undefined>(
+    isEdit ? new Date(state.event.start_at) : undefined
+  );
+  const [endAt, setEndAt] = useState<Date | undefined>(
+    isEdit && state.event.end_at ? new Date(state.event.end_at) : undefined
+  );
   const [allDay, setAllDay] = useState(isEdit ? state.event.all_day : false);
   const [color, setColor] = useState(isEdit ? (state.event.color ?? EVENT_COLORS[0]) : EVENT_COLORS[0]);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!title.trim() || !startAt.trim()) return;
-    const parsedStart = parseDateInput(startAt);
-    if (!parsedStart) {
-      onError(t('planner.invalidDate'));
-      return;
-    }
+    if (!title.trim() || !startAt) return;
     setLoading(true);
     await onSubmit({
       title: title.trim(),
       description: description.trim() || undefined,
-      start_at: parsedStart,
-      end_at: parseDateInput(endAt),
+      start_at: startAt.toISOString(),
+      end_at: endAt?.toISOString(),
       all_day: allDay,
       color,
     });
@@ -303,78 +269,82 @@ function EventModal({
   };
 
   return (
-    <ScrollView
-      style={[styles.modal, { backgroundColor: colors.surface }]}
-      contentContainerStyle={[styles.modalContent, { gap: 16, paddingBottom: 40 }]}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Text style={[styles.modalTitle, { color: colors.text }]}>{isEdit ? t('planner.editEvent') : t('planner.newEvent')}</Text>
-      <Input
-        label={t('planner.eventTitle')}
-        value={title}
-        onChangeText={setTitle}
-        placeholder={`${t('planner.eventTitle')}...`}
-        autoFocus
-      />
-      <Input
-        label={t('planner.eventDescription')}
-        value={description}
-        onChangeText={setDescription}
-        placeholder="Notas..."
-      />
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.eventStart')}</Text>
-      <RNTextInput
-        style={[styles.dateInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-        value={startAt}
-        onChangeText={setStartAt}
-        placeholder={t('planner.dateFormat')}
-        placeholderTextColor={colors.textMuted}
-        keyboardType="numbers-and-punctuation"
-      />
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.eventEnd')}</Text>
-      <RNTextInput
-        style={[styles.dateInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-        value={endAt}
-        onChangeText={setEndAt}
-        placeholder={t('planner.dateFormat')}
-        placeholderTextColor={colors.textMuted}
-        keyboardType="numbers-and-punctuation"
-      />
-      <View style={styles.switchRow}>
-        <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.allDay')}</Text>
-        <Switch
-          value={allDay}
-          onValueChange={setAllDay}
-          trackColor={{ true: colors.primary }}
-          thumbColor={colors.white}
-        />
-      </View>
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.color')}</Text>
-      <View style={styles.colorRow}>
-        {EVENT_COLORS.map((c) => (
-          <TouchableOpacity
-            key={c}
-            onPress={() => setColor(c)}
-            style={[
-              styles.colorDot,
-              { backgroundColor: c },
-              color === c && { borderWidth: 3, borderColor: colors.text },
-            ]}
+    <Pressable style={styles.modalOverlay} onPress={onClose}>
+      <Pressable
+        onPress={(e) => e.stopPropagation()}
+        style={{ width: '100%' }}
+      >
+        <ScrollView
+          style={[styles.modal, { backgroundColor: colors.surface }]}
+          contentContainerStyle={styles.modalScrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={[styles.modalTitle, { color: colors.text }]}>
+            {isEdit ? t('planner.editEvent') : t('planner.newEvent')}
+          </Text>
+          <Input
+            label={t('planner.eventTitle')}
+            value={title}
+            onChangeText={setTitle}
+            placeholder={`${t('planner.eventTitle')}...`}
+            autoFocus
           />
-        ))}
-      </View>
-      <View style={styles.modalActions}>
-        <Button label={t('planner.cancel')} variant="ghost" onPress={onClose} style={styles.modalBtn} />
-        <Button
-          label={isEdit ? t('planner.save') : t('planner.create')}
-          onPress={handleSubmit}
-          loading={loading}
-          disabled={!title.trim() || !startAt.trim()}
-          style={styles.modalBtn}
-        />
-      </View>
-    </ScrollView>
+          <Input
+            label={t('planner.eventDescription')}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Notas..."
+          />
+          <DatePickerField
+            label={t('planner.eventStart')}
+            value={startAt}
+            onChange={setStartAt}
+            placeholder="Seleccionar inicio"
+          />
+          <DatePickerField
+            label={t('planner.eventEnd')}
+            value={endAt}
+            onChange={setEndAt}
+            placeholder="Sin fecha de fin (opcional)"
+            minimumDate={startAt}
+          />
+          <View style={styles.switchRow}>
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.allDay')}</Text>
+            <Switch
+              value={allDay}
+              onValueChange={setAllDay}
+              trackColor={{ true: colors.primary }}
+              thumbColor={colors.white}
+            />
+          </View>
+          <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('planner.color')}</Text>
+          <View style={styles.colorRow}>
+            {EVENT_COLORS.map((c) => (
+              <TouchableOpacity
+                key={c}
+                onPress={() => setColor(c)}
+                style={[
+                  styles.colorDot,
+                  { backgroundColor: c },
+                  color === c && { borderWidth: 3, borderColor: colors.text },
+                ]}
+              />
+            ))}
+          </View>
+          <View style={styles.modalActions}>
+            <Button label={t('planner.cancel')} variant="ghost" onPress={onClose} style={styles.modalBtn} />
+            <Button
+              label={isEdit ? t('planner.save') : t('planner.create')}
+              onPress={handleSubmit}
+              loading={loading}
+              disabled={!title.trim() || !startAt}
+              style={styles.modalBtn}
+            />
+          </View>
+        </ScrollView>
+      </Pressable>
+    </Pressable>
   );
 }
 
@@ -383,8 +353,10 @@ function EventModal({
 export default function PlannerScreen() {
   const colors = useThemeColors();
   const t = useT();
+  const router = useRouter();
   const { show: showToast } = useToast();
   const { user } = useAuthStore();
+  const params = useLocalSearchParams<{ editTaskId?: string }>();
   const {
     tasks,
     loading: tasksLoading,
@@ -433,6 +405,19 @@ export default function PlannerScreen() {
       .catch(() => {});
   }, [googleConnected]);
 
+  // Abrir edición de tarea desde el dashboard
+  useFocusEffect(
+    useCallback(() => {
+      const editTaskId = params.editTaskId;
+      if (!editTaskId) return;
+      const task = tasks.find((tk) => tk.id === editTaskId);
+      if (task) {
+        setTaskModal({ mode: 'edit', task });
+        router.setParams({ editTaskId: undefined });
+      }
+    }, [params.editTaskId, tasks])
+  );
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadAll();
@@ -440,7 +425,18 @@ export default function PlannerScreen() {
   }, [loadAll]);
 
   const handleDeleteTask = useCallback((taskId: string) => {
-    removeTask(taskId).then(() => showToast(t('planner.taskDeleted'), 'success'));
+    Alert.alert(
+      t('planner.deleteTaskTitle'),
+      t('planner.deleteTaskMsg'),
+      [
+        { text: t('planner.cancel'), style: 'cancel' },
+        {
+          text: t('planner.deleteConfirm'),
+          style: 'destructive',
+          onPress: () => removeTask(taskId).then(() => showToast(t('planner.taskDeleted'), 'success')),
+        },
+      ]
+    );
   }, [removeTask, showToast]);
 
   const handleDeleteEvent = useCallback((eventId: string) => {
@@ -598,15 +594,13 @@ export default function PlannerScreen() {
         transparent
         onRequestClose={() => setTaskModal(null)}
       >
-        <View style={styles.modalOverlay}>
-          {taskModal && (
-            <TaskModal
-              state={taskModal}
-              onClose={() => setTaskModal(null)}
-              onSubmit={handleTaskSubmit}
-            />
-          )}
-        </View>
+        {taskModal && (
+          <TaskModal
+            state={taskModal}
+            onClose={() => setTaskModal(null)}
+            onSubmit={handleTaskSubmit}
+          />
+        )}
       </Modal>
 
       {/* Event modal */}
@@ -616,16 +610,13 @@ export default function PlannerScreen() {
         transparent
         onRequestClose={() => setEventModal(null)}
       >
-        <View style={styles.modalOverlay}>
-          {eventModal && (
-            <EventModal
-              state={eventModal}
-              onClose={() => setEventModal(null)}
-              onSubmit={handleEventSubmit}
-              onError={(msg) => showToast(msg, 'error')}
-            />
-          )}
-        </View>
+        {eventModal && (
+          <EventModal
+            state={eventModal}
+            onClose={() => setEventModal(null)}
+            onSubmit={handleEventSubmit}
+          />
+        )}
       </Modal>
     </SafeAreaView>
   );
@@ -695,24 +686,12 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
     gap: 16,
   },
-  modalContent: {},
+  modalScrollContent: {
+    gap: 16,
+    paddingBottom: 40,
+  },
   modalTitle: { fontSize: 20, fontWeight: '800' },
   fieldLabel: { fontSize: 14, fontWeight: '500' },
-  chipRow: { flexDirection: 'row', gap: 10 },
-  chip: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  chipText: { fontSize: 14, fontWeight: '600' },
-  dateInput: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-  },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',

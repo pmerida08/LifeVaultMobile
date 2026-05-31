@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/auth.store';
 import { useDocumentsStore } from '../../store/documents.store';
 import { useTasksStore } from '../../store/tasks.store';
 import { useEventsStore } from '../../store/events.store';
 import { ScreenLayout } from '../../components/layout/ScreenLayout';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { SkeletonDashboard } from '../../components/ui/Skeleton';
 import { useThemeColors } from '../../constants/colors';
 import { useT } from '../../store/i18n.store';
@@ -25,13 +25,10 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
 }
 
-function priorityVariant(priority: Task['priority']) {
-  return priority === 'high' ? 'danger' : priority === 'medium' ? 'warning' : 'success';
-}
-
 export default function DashboardScreen() {
   const colors = useThemeColors();
   const t = useT();
+  const router = useRouter();
   const { user } = useAuthStore();
   const { notes, load: loadDocs } = useDocumentsStore();
   const { tasks, load: loadTasks } = useTasksStore();
@@ -123,21 +120,17 @@ export default function DashboardScreen() {
         ) : (
           pendingTasks.map((task, i) => (
             <Animated.View key={task.id} entering={FadeInUp.duration(400).delay(360 + i * 60)}>
-              <Card style={styles.taskCard}>
-                <View style={styles.taskRow}>
-                  <Ionicons
-                    name={task.status === 'in_progress' ? 'time' : 'ellipse-outline'}
-                    size={18}
-                    color={task.status === 'in_progress' ? colors.warning : colors.textMuted}
-                    accessibilityElementsHidden
-                  />
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => router.push({ pathname: '/(tabs)/planner', params: { editTaskId: task.id } })}
+              >
+                <Card style={styles.taskCard}>
                   <Text style={styles.taskTitle} numberOfLines={1}>{task.title}</Text>
-                  <Badge label={task.priority} variant={priorityVariant(task.priority)} />
-                </View>
-                {task.due_date && (
-                  <Text style={styles.taskDue}>{t('dashboard.due')} {formatDate(task.due_date)}</Text>
-                )}
-              </Card>
+                  {task.due_date && (
+                    <Text style={styles.taskDue}>{t('dashboard.due')} {formatDate(task.due_date)}</Text>
+                  )}
+                </Card>
+              </TouchableOpacity>
             </Animated.View>
           ))
         )}
@@ -230,13 +223,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     taskCard: {
       gap: 4,
     },
-    taskRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
     taskTitle: {
-      flex: 1,
       fontSize: 15,
       color: colors.text,
       fontWeight: '500',

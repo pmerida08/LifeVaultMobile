@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAssistantStore } from '../../store/assistant.store';
 import { MarkdownText } from '../../components/ui/MarkdownText';
 import { TypingDots } from '../../components/ui/TypingDots';
@@ -117,6 +117,7 @@ const MessageBubble = React.memo(function MessageBubble({ message }: { message: 
 export default function AssistantScreen() {
   const colors = useThemeColors();
   const t = useT();
+  const insets = useSafeAreaInsets();
   const { messages, loading, send, clearSession } = useAssistantStore();
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList>(null);
@@ -129,7 +130,10 @@ export default function AssistantScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -185,7 +189,7 @@ export default function AssistantScreen() {
         )}
 
         {/* Input bar */}
-        <View style={[styles.inputBar, { backgroundColor: colors.surface }]}>
+        <View style={[styles.inputBar, { backgroundColor: colors.surface, paddingBottom: insets.bottom + 12 }]}>
           <TextInput
             style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
             value={input}
