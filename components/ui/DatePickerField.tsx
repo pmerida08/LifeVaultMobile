@@ -26,7 +26,8 @@ export function DatePickerField({ label, value, onChange, placeholder, minimumDa
   const lang = useI18nStore((s) => s.lang);
   const themePreference = useThemeStore((s) => s.theme);
   const locale = lang === 'en' ? 'en-GB' : 'es-ES';
-  const themeVariant = themePreference === 'system' ? 'auto' : themePreference;
+  // 'system' → undefined: el picker nativo sigue el tema del dispositivo
+  const themeVariant = themePreference === 'system' ? undefined : themePreference;
 
   const [showPicker, setShowPicker] = useState(false);
 

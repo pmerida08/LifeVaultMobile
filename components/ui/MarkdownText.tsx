@@ -6,6 +6,7 @@ import {
   StyleSheet,
   StyleProp,
   TextStyle,
+  ViewStyle,
   Platform,
 } from 'react-native';
 import { useThemeColors } from '../../constants/colors';
@@ -104,7 +105,7 @@ export function MarkdownText({ content, baseStyle }: MarkdownTextProps) {
     color: colors.primary,
     borderRadius: 3,
   };
-  const themedCodeBlock: TextStyle = { backgroundColor: colors.surface === '#FFFFFF' ? '#1E1B2E' : '#12111F', borderRadius: 8, padding: 12 };
+  const themedCodeBlock: ViewStyle = { backgroundColor: colors.surface === '#FFFFFF' ? '#1E1B2E' : '#12111F', borderRadius: 8, padding: 12 };
   const themedCodeBlockText: TextStyle = { fontFamily: monoFont, fontSize: 13, color: colors.surface === '#FFFFFF' ? '#E0D9FF' : '#D4CEFF', lineHeight: 20 };
 
   const lines = content.split('\n');
