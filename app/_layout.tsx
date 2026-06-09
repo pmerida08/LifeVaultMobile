@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Text, TextInput } from 'react-native';
 import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -16,6 +17,29 @@ import { useResolvedTheme } from '../constants/colors';
 import { Spinner } from '../components/ui/Spinner';
 import { ToastProvider } from '../lib/toast';
 import '../global.css';
+
+// Cap global del escalado de fuente a 1.3× para que el ajuste de "fuente grande"
+// del sistema no rompa los layouts. En React 19 defaultProps ya no se aplica a
+// componentes función (Text/TextInput son forwardRef), así que interceptamos su
+// render para inyectar maxFontSizeMultiplier por defecto sin pisar overrides locales.
+const MAX_FONT_SCALE = 1.3;
+
+function capFontScaling(Component: typeof Text | typeof TextInput) {
+  const target = Component as unknown as {
+    render?: (...args: unknown[]) => React.ReactElement<{ maxFontSizeMultiplier?: number }>;
+  };
+  const originalRender = target.render;
+  if (!originalRender) return;
+  target.render = function (this: unknown, ...args: unknown[]) {
+    const element = originalRender.apply(this, args);
+    return React.cloneElement(element, {
+      maxFontSizeMultiplier: element.props.maxFontSizeMultiplier ?? MAX_FONT_SCALE,
+    });
+  };
+}
+
+capFontScaling(Text);
+capFontScaling(TextInput);
 
 export default function RootLayout() {
   const { user, loading, initialize } = useAuthStore();
