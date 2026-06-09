@@ -56,6 +56,13 @@
     "typescript": "~5.9.2"
   },
   "private": true,
+  "expo": {
+    "install": {
+      "exclude": [
+        "react-native-worklets"
+      ]
+    }
+  },
   "jest": {
     "preset": "jest-expo",
     "setupFiles": [
