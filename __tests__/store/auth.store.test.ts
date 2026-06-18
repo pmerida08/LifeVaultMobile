@@ -8,8 +8,6 @@ jest.mock('../../lib/supabase', () => ({
       onAuthStateChange: jest.fn(() => ({
         data: { subscription: { unsubscribe: jest.fn() } },
       })),
-      signInWithPassword: jest.fn(),
-      signUp: jest.fn(),
       signOut: jest.fn(),
       signInWithIdToken: jest.fn(),
     },
@@ -55,71 +53,6 @@ describe('useAuthStore', () => {
 
     expect(result.current.user).toEqual(profile);
     expect(result.current.loading).toBe(false);
-  });
-
-  // ── login ─────────────────────────────────────────────────────────────────
-
-  it('login no lanza error en credenciales válidas', async () => {
-    supabase.auth.signInWithPassword.mockResolvedValueOnce({ error: null });
-
-    const { result } = renderHook(() => useAuthStore());
-    await act(async () => {
-      await expect(result.current.login('p@x.com', '1234')).resolves.toBeUndefined();
-    });
-
-    expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
-      email: 'p@x.com',
-      password: '1234',
-    });
-  });
-
-  it('login propaga el error de Supabase', async () => {
-    supabase.auth.signInWithPassword.mockResolvedValueOnce({
-      error: new Error('Credenciales inválidas'),
-    });
-
-    const { result } = renderHook(() => useAuthStore());
-    await act(async () => {
-      await expect(result.current.login('p@x.com', 'mal')).rejects.toThrow(
-        'Credenciales inválidas'
-      );
-    });
-  });
-
-  // ── register ──────────────────────────────────────────────────────────────
-
-  it('register crea el usuario y hace upsert del perfil', async () => {
-    const upsert = jest.fn().mockResolvedValue({});
-    supabase.auth.signUp.mockResolvedValueOnce({
-      data: { user: { id: 'u1' } },
-      error: null,
-    });
-    supabase.from.mockReturnValue({ upsert });
-
-    const { result } = renderHook(() => useAuthStore());
-    await act(async () => {
-      await result.current.register('p@x.com', '1234', 'Pablo');
-    });
-
-    expect(supabase.from).toHaveBeenCalledWith('users');
-    expect(upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'u1', email: 'p@x.com', name: 'Pablo', plan: 'free' }),
-      { onConflict: 'id' }
-    );
-  });
-
-  it('register propaga el error de Supabase', async () => {
-    supabase.auth.signUp.mockResolvedValueOnce({
-      data: {},
-      error: new Error('Email ya registrado'),
-    });
-
-    const { result } = renderHook(() => useAuthStore());
-    await act(async () => {
-      await expect(
-        result.current.register('p@x.com', '1234', 'Pablo')
-      ).rejects.toThrow('Email ya registrado');
-    });
   });
 
   // ── loginWithGoogle ─────────────────────────────────────────────────────────

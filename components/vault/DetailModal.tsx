@@ -8,33 +8,27 @@ import {
   ScrollView,
   Linking,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDocumentsStore } from '../../store/documents.store';
 import { getSignedUrl, extractStoragePath } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { Badge } from '../ui/Badge';
+import { CategoryBadge } from './CategoryBadge';
 import { useThemeColors } from '../../constants/colors';
 import { useToast } from '../../lib/toast';
+import { useT } from '../../store/i18n.store';
 import type { VaultNote } from '../../types';
 
 type Category = NonNullable<VaultNote['category']>;
 
-const CATEGORIES: { label: string; value: Category }[] = [
-  { label: 'Legal', value: 'legal' },
-  { label: 'Salud', value: 'health' },
-  { label: 'Finanzas', value: 'finance' },
-  { label: 'Personal', value: 'personal' },
-  { label: 'Otros', value: 'other' },
+const CATEGORIES: { labelKey: string; value: Category }[] = [
+  { labelKey: 'vault.catLegal', value: 'legal' },
+  { labelKey: 'vault.catHealth', value: 'health' },
+  { labelKey: 'vault.catFinance', value: 'finance' },
+  { labelKey: 'vault.catPersonal', value: 'personal' },
+  { labelKey: 'vault.catOther', value: 'other' },
 ];
-
-const CATEGORY_VARIANTS: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'muted'> = {
-  legal: 'danger',
-  health: 'success',
-  finance: 'warning',
-  personal: 'primary',
-  other: 'muted',
-};
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('es-ES', {
@@ -56,6 +50,8 @@ interface DetailModalProps {
 
 export function DetailModal({ note, onClose }: DetailModalProps) {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const t = useT();
   const { show: showToast } = useToast();
   const { updateNote, deleteNote } = useDocumentsStore();
 
@@ -124,11 +120,9 @@ export function DetailModal({ note, onClose }: DetailModalProps) {
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border, paddingTop: insets.top + 12 }]}>
           <View style={styles.headerLeft}>
-            {note.category && (
-              <Badge label={note.category} variant={CATEGORY_VARIANTS[note.category] ?? 'muted'} />
-            )}
+            <CategoryBadge category={category} />
           </View>
           <Pressable onPress={onClose} accessibilityLabel="Cerrar" style={[styles.closeBtn, { backgroundColor: colors.surface }]}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
@@ -179,7 +173,7 @@ export function DetailModal({ note, onClose }: DetailModalProps) {
                     styles.chipText,
                     { color: category === cat.value ? colors.white : colors.textMuted },
                   ]}>
-                    {cat.label}
+                    {t(cat.labelKey)}
                   </Text>
                 </Pressable>
               ))}
@@ -218,7 +212,7 @@ export function DetailModal({ note, onClose }: DetailModalProps) {
 
         {/* Footer guardar */}
         {dirty && (
-          <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <View style={[styles.footer, { borderTopColor: colors.border, paddingBottom: insets.bottom + 16 }]}>
             <Button
               label={saving ? 'Guardando…' : 'Guardar cambios'}
               onPress={handleSave}
@@ -241,7 +235,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 20,
     paddingBottom: 12,
     borderBottomWidth: 1,
   },
@@ -307,7 +300,6 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 20,
-    paddingBottom: 36,
     borderTopWidth: 1,
   },
 });

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/auth.store';
 import { useDocumentsStore } from '../../store/documents.store';
@@ -16,16 +17,17 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useThemeColors } from '../../constants/colors';
 import { useToast } from '../../lib/toast';
+import { useT } from '../../store/i18n.store';
 import type { VaultNote } from '../../types';
 
 type Category = NonNullable<VaultNote['category']>;
 
-const CATEGORIES: { label: string; value: Category }[] = [
-  { label: 'Legal', value: 'legal' },
-  { label: 'Salud', value: 'health' },
-  { label: 'Finanzas', value: 'finance' },
-  { label: 'Personal', value: 'personal' },
-  { label: 'Otros', value: 'other' },
+const CATEGORIES: { labelKey: string; value: Category }[] = [
+  { labelKey: 'vault.catLegal', value: 'legal' },
+  { labelKey: 'vault.catHealth', value: 'health' },
+  { labelKey: 'vault.catFinance', value: 'finance' },
+  { labelKey: 'vault.catPersonal', value: 'personal' },
+  { labelKey: 'vault.catOther', value: 'other' },
 ];
 
 interface UploadModalProps {
@@ -41,6 +43,8 @@ function formatBytes(bytes: number): string {
 
 export function UploadModal({ visible, onClose }: UploadModalProps) {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const t = useT();
   const { show: showToast } = useToast();
   const { user } = useAuthStore();
   const { upload, uploading } = useDocumentsStore();
@@ -100,7 +104,7 @@ export function UploadModal({ visible, onClose }: UploadModalProps) {
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border, paddingTop: insets.top + 12 }]}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Añadir documento</Text>
           <Pressable onPress={handleClose} accessibilityLabel="Cerrar" style={[styles.closeBtn, { backgroundColor: colors.surface }]}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
@@ -163,7 +167,7 @@ export function UploadModal({ visible, onClose }: UploadModalProps) {
                     styles.chipText,
                     { color: category === cat.value ? colors.white : colors.textMuted },
                   ]}>
-                    {cat.label}
+                    {t(cat.labelKey)}
                   </Text>
                 </Pressable>
               ))}
@@ -182,7 +186,7 @@ export function UploadModal({ visible, onClose }: UploadModalProps) {
         </ScrollView>
 
         {/* Footer */}
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <View style={[styles.footer, { borderTopColor: colors.border, paddingBottom: insets.bottom + 16 }]}>
           <Button
             label={uploading ? 'Subiendo…' : 'Subir documento'}
             onPress={handleUpload}
@@ -205,7 +209,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 20,
     paddingBottom: 12,
     borderBottomWidth: 1,
   },
@@ -282,7 +285,6 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 20,
-    paddingBottom: 36,
     borderTopWidth: 1,
   },
 });

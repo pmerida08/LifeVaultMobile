@@ -16,8 +16,6 @@ interface AuthStore {
   loading: boolean;
   initialize: () => Promise<void>;
   cleanup: () => void;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -82,19 +80,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
   cleanup: () => {
     _authSubscription?.unsubscribe();
     _authSubscription = null;
-  },
-
-  login: async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-  },
-
-  register: async (email, password, name) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
-    if (data.user) {
-      await upsertProfile(data.user.id, email, name);
-    }
   },
 
   loginWithGoogle: async () => {

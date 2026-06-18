@@ -21,7 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/auth.store';
 import { useDocumentsStore } from '../../store/documents.store';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
+import { CategoryBadge } from '../../components/vault/CategoryBadge';
 import { SkeletonVault } from '../../components/ui/Skeleton';
 import { UploadModal } from '../../components/vault/UploadModal';
 import { DetailModal } from '../../components/vault/DetailModal';
@@ -37,14 +37,6 @@ const CATEGORY_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name
   finance: 'cash-outline',
   personal: 'person-outline',
   other: 'document-outline',
-};
-
-const CATEGORY_VARIANTS: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'muted'> = {
-  legal: 'danger',
-  health: 'success',
-  finance: 'warning',
-  personal: 'primary',
-  other: 'muted',
 };
 
 function formatDate(dateStr: string): string {
@@ -63,7 +55,6 @@ interface NoteCardProps {
 const NoteCard = React.memo(function NoteCard({ note, index, onPress, pinnedLabel }: NoteCardProps) {
   const colors = useThemeColors();
   const icon = CATEGORY_ICONS[note.category ?? 'other'] ?? 'document-outline';
-  const variant = CATEGORY_VARIANTS[note.category ?? 'other'] ?? 'muted';
 
   const categoryColorMap: Record<string, string> = {
     legal: colors.categoryLegal,
@@ -97,7 +88,7 @@ const NoteCard = React.memo(function NoteCard({ note, index, onPress, pinnedLabe
             <Ionicons name="chevron-forward" size={16} color={colors.border} />
           </View>
           <View style={styles.noteMeta}>
-            {!!note.category && <Badge label={note.category} variant={variant} />}
+            {!!note.category && <CategoryBadge category={note.category} />}
             {!!note.file_name && (
               <Text style={[styles.fileName, { color: colors.textMuted }]} numberOfLines={1}>{note.file_name}</Text>
             )}
@@ -124,7 +115,7 @@ function FAB({ onPress, label }: { onPress: () => void; label: string }) {
       onPressOut={() => { scale.value = withSpring(1, { damping: 10, stiffness: 200 }); }}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }, fabStyle]}
+      style={[styles.fab, { backgroundColor: colors.primary }, fabStyle]}
     >
       <Ionicons name="add" size={28} color={colors.white} accessibilityElementsHidden />
     </AnimatedPressable>
@@ -396,9 +387,6 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-    elevation: 10,
+    elevation: 0,
   },
 });

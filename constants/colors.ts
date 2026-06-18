@@ -1,5 +1,6 @@
 import { useColorScheme } from 'react-native';
 import { useThemeStore } from '../store/theme.store';
+import { useAuthStore } from '../store/auth.store';
 
 export const LightColors = {
   primary:         '#3730AB',
@@ -71,7 +72,10 @@ export type ThemeColors = {
 export function useResolvedTheme(): 'light' | 'dark' {
   const device = useColorScheme();
   const { theme } = useThemeStore();
-  if (theme === 'system') return device === 'dark' ? 'dark' : 'light';
+  const user = useAuthStore((s) => s.user);
+  // Sin sesión iniciada: usar siempre el tema del dispositivo, ignorando
+  // cualquier preferencia guardada de una sesión anterior.
+  if (!user || theme === 'system') return device === 'dark' ? 'dark' : 'light';
   return theme;
 }
 

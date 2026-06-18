@@ -8,15 +8,8 @@
   },
   "login": {
     "subtitle": "Tu bóveda personal de conocimiento",
-    "email": "Email",
-    "password": "Contraseña",
-    "enter": "Entrar",
     "continueWithGoogle": "Continuar con Google",
     "connecting": "Conectando...",
-    "noAccount": "¿No tienes cuenta?",
-    "register": "Regístrate",
-    "fillFields": "Rellena todos los campos",
-    "wrongCredentials": "Credenciales incorrectas",
     "googleError": "Error al iniciar sesión con Google"
   },
   "register": {
@@ -90,7 +83,11 @@
     "eventDescription": "Descripción (opcional)",
     "deleteTaskTitle": "Eliminar tarea",
     "deleteTaskMsg": "¿Estás seguro de que quieres eliminar esta tarea?",
+    "deleteEventTitle": "Eliminar evento",
+    "deleteEventMsg": "¿Estás seguro de que quieres eliminar este evento?",
     "deleteConfirm": "Eliminar",
+    "addTask": "Tarea",
+    "addEvent": "Evento",
     "priority": "Prioridad",
     "dueDate": "Fecha límite",
     "priorityLow": "Baja",
@@ -120,7 +117,6 @@
     "signOut": "Cerrar sesión",
     "accountSection": "Cuenta",
     "editProfile": "Editar perfil",
-    "changePassword": "Cambiar contraseña",
     "subscription": "Suscripción",
     "appSection": "Aplicación",
     "notifications": "Notificaciones",
@@ -153,16 +149,6 @@
     "error": "Error al guardar el perfil",
     "nameRequired": "El nombre no puede estar vacío",
     "photoPermissionDenied": "Permiso denegado para acceder a la galería"
-  },
-  "changePassword": {
-    "newPassword": "Nueva contraseña",
-    "confirmPassword": "Confirmar contraseña",
-    "save": "Cambiar contraseña",
-    "success": "Contraseña actualizada correctamente",
-    "mismatch": "Las contraseñas no coinciden",
-    "tooShort": "Mínimo 6 caracteres",
-    "error": "Error al cambiar la contraseña",
-    "info": "Recibirás un email de confirmación. La nueva contraseña se aplica tras confirmarla."
   },
   "subscription": {
     "currentPlan": "Tu plan actual",

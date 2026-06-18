@@ -71,6 +71,7 @@ export function DatePickerField({ label, value, onChange, placeholder, minimumDa
       {Platform.OS === 'android' && showPicker && (
         <CustomDateTimePicker
           value={value}
+          minimumDate={minimumDate}
           onChange={(date) => { onChange(date); setShowPicker(false); }}
           onClose={() => setShowPicker(false)}
         />

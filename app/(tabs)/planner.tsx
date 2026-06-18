@@ -10,10 +10,12 @@ import {
   Pressable,
   Alert,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '../../store/auth.store';
@@ -212,10 +214,12 @@ function TaskModal({
   state,
   onClose,
   onSubmit,
+  bottomInset,
 }: {
   state: Exclude<TaskModalState, null>;
   onClose: () => void;
   onSubmit: (data: Pick<Task, 'title' | 'description' | 'priority' | 'due_date'>) => Promise<void>;
+  bottomInset: number;
 }) {
   const colors = useThemeColors();
   const t = useT();
@@ -241,9 +245,13 @@ function TaskModal({
   };
 
   return (
-    <Pressable style={styles.modalOverlay} onPress={onClose}>
+    <KeyboardAvoidingView
+      style={styles.modalOverlay}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       <Pressable
-        style={[styles.modal, { backgroundColor: colors.surface }]}
+        style={[styles.modal, { backgroundColor: colors.surface, paddingBottom: bottomInset + 24 }]}
         onPress={(e) => e.stopPropagation()}
       >
         <Text style={[styles.modalTitle, { color: colors.text }]}>
@@ -284,7 +292,7 @@ function TaskModal({
           />
         </View>
       </Pressable>
-    </Pressable>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -294,10 +302,12 @@ function EventModal({
   state,
   onClose,
   onSubmit,
+  bottomInset,
 }: {
   state: Exclude<EventModalState, null>;
   onClose: () => void;
   onSubmit: (data: Pick<CalendarEvent, 'title' | 'description' | 'start_at' | 'end_at' | 'all_day' | 'color'>) => Promise<void>;
+  bottomInset: number;
 }) {
   const colors = useThemeColors();
   const t = useT();
@@ -330,17 +340,15 @@ function EventModal({
   };
 
   return (
-    <Pressable style={styles.modalOverlay} onPress={onClose}>
+    <KeyboardAvoidingView
+      style={styles.modalOverlay}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       <Pressable
+        style={[styles.modal, { backgroundColor: colors.surface, paddingBottom: bottomInset + 24 }]}
         onPress={(e) => e.stopPropagation()}
-        style={{ width: '100%' }}
       >
-        <ScrollView
-          style={[styles.modal, { backgroundColor: colors.surface }]}
-          contentContainerStyle={styles.modalScrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
           <Text style={[styles.modalTitle, { color: colors.text }]}>
             {isEdit ? t('planner.editEvent') : t('planner.newEvent')}
           </Text>
@@ -403,9 +411,8 @@ function EventModal({
               style={styles.modalBtn}
             />
           </View>
-        </ScrollView>
       </Pressable>
-    </Pressable>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -414,6 +421,7 @@ function EventModal({
 export default function PlannerScreen() {
   const colors = useThemeColors();
   const t = useT();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { show: showToast } = useToast();
   const { user } = useAuthStore();
@@ -438,6 +446,7 @@ export default function PlannerScreen() {
 
   const [taskModal, setTaskModal] = useState<TaskModalState>(null);
   const [eventModal, setEventModal] = useState<EventModalState>(null);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
@@ -501,7 +510,18 @@ export default function PlannerScreen() {
   }, [removeTask, showToast]);
 
   const handleDeleteEvent = useCallback((eventId: string) => {
-    removeEvent(eventId).then(() => showToast(t('planner.eventDeleted'), 'success'));
+    Alert.alert(
+      t('planner.deleteEventTitle'),
+      t('planner.deleteEventMsg'),
+      [
+        { text: t('planner.cancel'), style: 'cancel' },
+        {
+          text: t('planner.deleteConfirm'),
+          style: 'destructive',
+          onPress: () => removeEvent(eventId).then(() => showToast(t('planner.eventDeleted'), 'success')),
+        },
+      ]
+    );
   }, [removeEvent, showToast]);
 
   const handleTaskSubmit = useCallback(async (
@@ -578,16 +598,12 @@ export default function PlannerScreen() {
               }}
             />
             <TouchableOpacity
-              onPress={() => setEventModal({ mode: 'create' })}
-              style={[styles.addBtn, styles.addBtnOutline, { backgroundColor: colors.surface, borderColor: colors.primary }]}
-            >
-              <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setTaskModal({ mode: 'create' })}
+              onPress={() => setAddMenuOpen((v) => !v)}
               style={[styles.addBtn, { backgroundColor: colors.primary }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('planner.newTask')}
             >
-              <Ionicons name="add" size={22} color={colors.white} />
+              <Ionicons name={addMenuOpen ? 'close' : 'add'} size={22} color={colors.white} />
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -655,6 +671,30 @@ export default function PlannerScreen() {
         )}
       </ScrollView>
 
+      {/* Menú "+" desplegable: añadir Tarea o Evento */}
+      {addMenuOpen && (
+        <>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setAddMenuOpen(false)} />
+          <View style={[styles.addMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TouchableOpacity
+              style={styles.addMenuItem}
+              onPress={() => { setAddMenuOpen(false); setTaskModal({ mode: 'create' }); }}
+            >
+              <Ionicons name="checkbox-outline" size={18} color={colors.primary} />
+              <Text style={[styles.addMenuText, { color: colors.text }]}>{t('planner.addTask')}</Text>
+            </TouchableOpacity>
+            <View style={[styles.addMenuDivider, { backgroundColor: colors.border }]} />
+            <TouchableOpacity
+              style={styles.addMenuItem}
+              onPress={() => { setAddMenuOpen(false); setEventModal({ mode: 'create' }); }}
+            >
+              <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+              <Text style={[styles.addMenuText, { color: colors.text }]}>{t('planner.addEvent')}</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
       {/* Task modal */}
       <Modal
         visible={taskModal !== null}
@@ -667,6 +707,7 @@ export default function PlannerScreen() {
             state={taskModal}
             onClose={() => setTaskModal(null)}
             onSubmit={handleTaskSubmit}
+            bottomInset={insets.bottom}
           />
         )}
       </Modal>
@@ -683,6 +724,7 @@ export default function PlannerScreen() {
             state={eventModal}
             onClose={() => setEventModal(null)}
             onSubmit={handleEventSubmit}
+            bottomInset={insets.bottom}
           />
         )}
       </Modal>
@@ -711,9 +753,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addBtnOutline: {
+  addMenu: {
+    position: 'absolute',
+    top: 60,
+    right: 16,
+    minWidth: 180,
+    borderRadius: 14,
     borderWidth: 1,
+    paddingVertical: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
   },
+  addMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  addMenuText: { fontSize: 15, fontWeight: '600' },
+  addMenuDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 12 },
   section: { paddingHorizontal: 16, paddingBottom: 16, gap: 12 },
   sectionTitle: { fontSize: 19, fontWeight: '700' },
   group: { gap: 8 },
@@ -756,10 +818,6 @@ const styles = StyleSheet.create({
     padding: 24,
     maxHeight: '90%',
     gap: 16,
-  },
-  modalScrollContent: {
-    gap: 16,
-    paddingBottom: 40,
   },
   modalTitle: { fontSize: 20, fontWeight: '800' },
   fieldLabel: { fontSize: 14, fontWeight: '500' },

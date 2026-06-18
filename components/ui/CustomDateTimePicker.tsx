@@ -20,6 +20,7 @@ interface Props {
   value: Date | undefined;
   onChange: (date: Date | undefined) => void;
   onClose: () => void;
+  minimumDate?: Date;
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -34,17 +35,31 @@ function startOffset(year: number, month: number) {
 
 type Step = 'date' | 'time';
 
-export function CustomDateTimePicker({ value, onChange, onClose }: Props) {
+export function CustomDateTimePicker({ value, onChange, onClose, minimumDate }: Props) {
   const colors = useThemeColors();
   const lang = useI18nStore((s) => s.lang);
 
-  const init = value ?? new Date();
+  // Suelo de fecha mínima (a día, sin hora) para comparar selección de día.
+  const minFloor = minimumDate
+    ? new Date(minimumDate.getFullYear(), minimumDate.getMonth(), minimumDate.getDate())
+    : null;
+  // Base inicial: el valor actual, o el mínimo si existe, o ahora.
+  const base = value ?? minimumDate ?? new Date();
+  // Redondea al múltiplo de 5 más cercano (mantiene el contador en pasos de 5)
+  const roundTo5 = (n: number) => (Math.round(n / 5) * 5) % 60;
   const [step, setStep] = useState<Step>('date');
-  const [viewYear, setViewYear] = useState(init.getFullYear());
-  const [viewMonth, setViewMonth] = useState(init.getMonth());
-  const [selectedDay, setSelectedDay] = useState(init.getDate());
-  const [hour, setHour] = useState(init.getHours());
-  const [minute, setMinute] = useState(init.getMinutes());
+  const [viewYear, setViewYear] = useState(base.getFullYear());
+  const [viewMonth, setViewMonth] = useState(base.getMonth());
+  const [selectedDay, setSelectedDay] = useState(base.getDate());
+  // Sin valor previo: hora por defecto 00:00. Con valor: minuto ajustado a múltiplo de 5.
+  const [hour, setHour] = useState(value ? base.getHours() : 0);
+  const [minute, setMinute] = useState(value ? roundTo5(base.getMinutes()) : 0);
+
+  const isDayDisabled = (day: number) =>
+    !!minFloor && new Date(viewYear, viewMonth, day) < minFloor;
+  const canGoPrev =
+    !minFloor || viewYear > minFloor.getFullYear() ||
+    (viewYear === minFloor.getFullYear() && viewMonth > minFloor.getMonth());
 
   const months = lang === 'en' ? MONTHS_EN : MONTHS_ES;
   const days   = lang === 'en' ? DAYS_EN   : DAYS_ES;
@@ -53,6 +68,7 @@ export function CustomDateTimePicker({ value, onChange, onClose }: Props) {
   const offset = startOffset(viewYear, viewMonth);
 
   const prevMonth = () => {
+    if (!canGoPrev) return;
     if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
     else setViewMonth(m => m - 1);
   };
@@ -66,7 +82,9 @@ export function CustomDateTimePicker({ value, onChange, onClose }: Props) {
   };
 
   const confirmTime = () => {
-    const d = new Date(viewYear, viewMonth, selectedDay, hour, minute, 0, 0);
+    let d = new Date(viewYear, viewMonth, selectedDay, hour, minute, 0, 0);
+    // No permitir una fecha/hora anterior al mínimo (p. ej. fin antes del inicio).
+    if (minimumDate && d < minimumDate) d = new Date(minimumDate);
     onChange(d);
     onClose();
   };
@@ -157,6 +175,9 @@ export function CustomDateTimePicker({ value, onChange, onClose }: Props) {
     },
     dayTextEmpty: {
       color: 'transparent',
+    },
+    dayTextDisabled: {
+      color: colors.border,
     },
     timeBody: {
       paddingHorizontal: 24,
@@ -259,8 +280,8 @@ export function CustomDateTimePicker({ value, onChange, onClose }: Props) {
             <View style={s.body}>
               {/* Month navigation */}
               <View style={s.navRow}>
-                <TouchableOpacity style={s.navBtn} onPress={prevMonth}>
-                  <Ionicons name="chevron-back" size={20} color={colors.primary} />
+                <TouchableOpacity style={s.navBtn} onPress={prevMonth} disabled={!canGoPrev}>
+                  <Ionicons name="chevron-back" size={20} color={canGoPrev ? colors.primary : colors.border} />
                 </TouchableOpacity>
                 <Text style={s.navTitle}>{months[viewMonth]} {viewYear}</Text>
                 <TouchableOpacity style={s.navBtn} onPress={nextMonth}>
@@ -276,23 +297,27 @@ export function CustomDateTimePicker({ value, onChange, onClose }: Props) {
               {/* Calendar grid */}
               {rows.map((row, ri) => (
                 <View key={ri} style={s.gridRow}>
-                  {row.map((day, di) => (
-                    <TouchableOpacity
-                      key={di}
-                      style={[s.dayCell, day === selectedDay && viewMonth === init.getMonth() || day === selectedDay ? s.dayCellSelected : null]}
-                      onPress={() => day && setSelectedDay(day)}
-                      activeOpacity={day ? 0.7 : 1}
-                      disabled={!day}
-                    >
-                      <Text style={[
-                        s.dayText,
-                        !day && s.dayTextEmpty,
-                        day === selectedDay && s.dayTextSelected,
-                      ]}>
-                        {day ?? ' '}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  {row.map((day, di) => {
+                    const disabled = !day || (day != null && isDayDisabled(day));
+                    return (
+                      <TouchableOpacity
+                        key={di}
+                        style={[s.dayCell, day === selectedDay ? s.dayCellSelected : null]}
+                        onPress={() => day && !isDayDisabled(day) && setSelectedDay(day)}
+                        activeOpacity={disabled ? 1 : 0.7}
+                        disabled={disabled}
+                      >
+                        <Text style={[
+                          s.dayText,
+                          !day && s.dayTextEmpty,
+                          day != null && isDayDisabled(day) && s.dayTextDisabled,
+                          day === selectedDay && s.dayTextSelected,
+                        ]}>
+                          {day ?? ' '}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               ))}
             </View>

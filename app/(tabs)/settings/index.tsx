@@ -211,12 +211,6 @@ export default function SettingsScreen() {
             />
             <Separator />
             <MenuItem
-              icon="key-outline"
-              label={t('settings.changePassword')}
-              onPress={() => router.push('/(tabs)/settings/change-password')}
-            />
-            <Separator />
-            <MenuItem
               icon="card-outline"
               label={t('settings.subscription')}
               onPress={() => router.push('/(tabs)/settings/subscription')}

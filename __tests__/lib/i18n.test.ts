@@ -15,8 +15,7 @@ describe('i18n', () => {
     });
 
     it('traduce login correctamente', () => {
-      expect(t('login.enter')).toBe('Entrar');
-      expect(t('login.email')).toBe('Email');
+      expect(t('login.continueWithGoogle')).toBe('Continuar con Google');
     });
 
     it('soporta interpolación', () => {
@@ -42,7 +41,7 @@ describe('i18n', () => {
     });
 
     it('traduce login correctamente', () => {
-      expect(t('login.enter')).toBe('Sign in');
+      expect(t('login.continueWithGoogle')).toBe('Continue with Google');
     });
   });
 

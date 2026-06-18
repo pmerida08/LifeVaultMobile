@@ -3,8 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   Image,
   Pressable,
 } from 'react-native';
@@ -16,11 +14,8 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/auth.store';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
 import { Colors, useThemeColors } from '../../constants/colors';
 import { useT } from '../../store/i18n.store';
 
@@ -29,10 +24,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export default function LoginScreen() {
   const colors = useThemeColors();
   const t = useT();
-  const { login, loginWithGoogle } = useAuthStore();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { loginWithGoogle } = useAuthStore();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -40,19 +32,6 @@ export default function LoginScreen() {
   const googleAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: googleScale.value }],
   }));
-
-  const handleLogin = async () => {
-    if (!email || !password) { setError(t('login.fillFields')); return; }
-    setLoading(true);
-    setError('');
-    try {
-      await login(email.trim(), password);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('login.wrongCredentials'));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleGoogle = async () => {
     setGoogleLoading(true);
@@ -68,10 +47,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
+      <View style={styles.container}>
         {/* Logo + header */}
         <Animated.View
           entering={FadeInDown.duration(600).delay(0).easing(Easing.out(Easing.quad))}
@@ -87,44 +63,12 @@ export default function LoginScreen() {
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t('login.subtitle')}</Text>
         </Animated.View>
 
-        {/* Form */}
+        {/* Google sign-in */}
         <Animated.View
           entering={FadeInUp.duration(600).delay(150).easing(Easing.out(Easing.quad))}
           style={styles.form}
         >
-          <Input
-            label={t('login.email')}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="tu@email.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            textContentType="emailAddress"
-          />
-          <Input
-            label={t('login.password')}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="••••••••"
-            secureTextEntry
-            autoComplete="password"
-            textContentType="password"
-          />
           {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
-          <Button
-            label={t('login.enter')}
-            onPress={handleLogin}
-            loading={loading}
-            size="lg"
-            style={styles.button}
-          />
-
-          <View style={styles.divider}>
-            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-            <Text style={[styles.dividerText, { color: colors.textMuted }]}>o</Text>
-            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-          </View>
 
           <AnimatedPressable
             onPress={handleGoogle}
@@ -145,18 +89,7 @@ export default function LoginScreen() {
             </Text>
           </AnimatedPressable>
         </Animated.View>
-
-        {/* Footer */}
-        <Animated.View
-          entering={FadeInUp.duration(500).delay(300).easing(Easing.out(Easing.quad))}
-          style={styles.footer}
-        >
-          <Text style={[styles.footerText, { color: colors.textMuted }]}>{t('login.noAccount')} </Text>
-          <Link href="/(auth)/register" style={[styles.footerLink, { color: colors.primary }]}>
-            {t('login.register')}
-          </Link>
-        </Animated.View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -170,7 +103,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     justifyContent: 'center',
-    gap: 32,
+    gap: 40,
   },
   header: {
     alignItems: 'center',
@@ -189,6 +122,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.textMuted,
     marginTop: 4,
+    textAlign: 'center',
   },
   form: {
     gap: 16,
@@ -197,24 +131,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.danger,
     textAlign: 'center',
-  },
-  button: {
-    marginTop: 4,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginVertical: 4,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.border,
-  },
-  dividerText: {
-    color: Colors.textMuted,
-    fontSize: 14,
   },
   googleButton: {
     flexDirection: 'row',
@@ -242,19 +158,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: Colors.text,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  footerText: {
-    color: Colors.textMuted,
-    fontSize: 15,
-  },
-  footerLink: {
-    color: Colors.primary,
-    fontSize: 15,
-    fontWeight: '600',
   },
 });
