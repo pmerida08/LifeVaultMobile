@@ -51,7 +51,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -68,7 +68,7 @@ export default function RegisterScreen() {
             accessibilityLabel="LifeVault"
           />
           <Text style={[styles.appName, { color: colors.primary }]}>LifeVault</Text>
-          <Text style={styles.subtitle}>{t('register.title')}</Text>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t('register.title')}</Text>
         </Animated.View>
 
         {/* Form */}
@@ -104,7 +104,7 @@ export default function RegisterScreen() {
             autoComplete="new-password"
             textContentType="newPassword"
           />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
           <Button
             label={t('register.createAccount')}
             onPress={handleRegister}
@@ -119,8 +119,8 @@ export default function RegisterScreen() {
           entering={FadeInUp.duration(500).delay(300).easing(Easing.out(Easing.quad))}
           style={styles.footer}
         >
-          <Text style={styles.footerText}>{t('register.hasAccount')} </Text>
-          <Link href="/(auth)/login" style={styles.footerLink}>
+          <Text style={[styles.footerText, { color: colors.textMuted }]}>{t('register.hasAccount')} </Text>
+          <Link href="/(auth)/login" style={[styles.footerLink, { color: colors.primary }]}>
             {t('register.signIn')}
           </Link>
         </Animated.View>
