@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LifeVault · Presentación TFM</title>
+<link rel="icon" href="assets/favicon.png" />
+<style>
+  :root {
+    --primary: #4d44e3;
+    --primary-light: #6c64f0;
+    --indigo-deep: #1f1c6b;
+    --ink: #1a1a2e;
+    --bg: #0c0b1e;
+    --bg-soft: #141233;
+    --surface: #1b1840;
+    --surface-2: #221e52;
+    --text: #ece9ff;
+    --text-muted: #a39fd0;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --border: rgba(140, 130, 240, 0.18);
+    --shadow: 0 24px 60px -20px rgba(0,0,0,0.6);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(900px 600px at 80% -10%, rgba(77,68,227,0.28), transparent 60%),
+      radial-gradient(700px 500px at 0% 100%, rgba(108,100,240,0.18), transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .deck {
+    scroll-snap-type: y mandatory;
+    height: 100vh;
+    overflow-y: scroll;
+    position: relative;
+    z-index: 1;
+  }
+
+  section {
+    scroll-snap-align: start;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 64px 24px;
+    position: relative;
+  }
+
+  .wrap { width: 100%; max-width: 1080px; margin: 0 auto; }
+
+  /* ---------- NAV dots ---------- */
+  .dots {
+    position: fixed;
+    right: 26px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    z-index: 50;
+  }
+  .dots a {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+    transition: all .25s ease;
+    position: relative;
+  }
+  .dots a:hover { background: var(--primary-light); transform: scale(1.3); }
+  .dots a.active {
+    background: var(--primary-light);
+    box-shadow: 0 0 0 4px rgba(108,100,240,0.25);
+  }
+  .dots a span {
+    position: absolute; right: 22px; top: 50%; transform: translateY(-50%);
+    white-space: nowrap; font-size: 12px; color: var(--text-muted);
+    background: var(--surface); padding: 4px 10px; border-radius: 8px;
+    border: 1px solid var(--border);
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .dots a:hover span { opacity: 1; }
+
+  .progress {
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--primary-light));
+    z-index: 60; width: 0%; transition: width .15s ease;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero { text-align: center; }
+  .hero img.logo { width: 168px; height: auto; filter: drop-shadow(0 18px 40px rgba(77,68,227,0.45)); animation: float 5s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  .hero h1 {
+    font-size: clamp(40px, 7vw, 76px);
+    font-weight: 800; letter-spacing: -1.5px; margin-top: 18px;
+    background: linear-gradient(120deg, #fff 20%, var(--primary-light));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero .tagline { font-size: clamp(17px, 2.4vw, 23px); color: var(--text-muted); margin-top: 12px; font-weight: 500; }
+  .hero .meta { margin-top: 30px; display: inline-flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .chip {
+    font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
+  }
+  .chip strong { color: var(--text); }
+  .scroll-hint { margin-top: 48px; color: var(--text-muted); font-size: 13px; letter-spacing: .5px; animation: bob 1.8s infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0);opacity:.6} 50%{transform:translateY(6px);opacity:1} }
+
+  /* ---------- TÍTULOS DE SECCIÓN ---------- */
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--primary-light); margin-bottom: 18px;
+  }
+  .eyebrow .num {
+    display: inline-grid; place-items: center;
+    width: 30px; height: 30px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--primary), var(--indigo-deep));
+    color: #fff; font-size: 14px;
+  }
+  h2 { font-size: clamp(28px, 4.4vw, 46px); font-weight: 800; letter-spacing: -1px; line-height: 1.1; }
+  .lead { font-size: clamp(16px, 2vw, 19px); color: var(--text-muted); line-height: 1.65; margin-top: 18px; max-width: 720px; }
+
+  /* ---------- PROBLEMA ---------- */
+  .prob-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 36px; }
+  .prob-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px;
+    text-align: left;
+  }
+  .prob-card .ic { font-size: 26px; }
+  .prob-card h4 { margin-top: 12px; font-size: 16px; }
+  .prob-card p { color: var(--text-muted); font-size: 14px; margin-top: 6px; line-height: 1.55; }
+  .arrow-down { margin: 34px auto 0; color: var(--primary-light); font-weight: 700; font-size: 15px; }
+  .solution {
+    margin-top: 30px; background: linear-gradient(135deg, rgba(77,68,227,0.22), rgba(31,28,107,0.22));
+    border: 1px solid var(--border); border-radius: 18px; padding: 26px 28px; max-width: 760px;
+  }
+  .solution strong { color: #fff; }
+
+  /* ---------- CLIP ---------- */
+  .clip { width: 100%; max-width: 1080px; }
+  .clip-grid { display: grid; grid-template-columns: 1fr 1.02fr; gap: 40px; align-items: center; }
+  .clip-copy { text-align: left; }
+  .clip-copy .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; }
+  .tag {
+    font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 8px;
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted);
+  }
+  .tag.tech { color: var(--primary-light); border-color: rgba(108,100,240,0.4); }
+  .clip-copy ul { list-style: none; margin-top: 20px; display: flex; flex-direction: column; gap: 11px; }
+  .clip-copy li { display: flex; gap: 11px; font-size: 15px; color: var(--text-muted); line-height: 1.5; }
+  .clip-copy li::before { content: '▸'; color: var(--primary-light); font-weight: 700; }
+  .clip-copy li b { color: var(--text); font-weight: 600; }
+
+  /* ---------- MARCO DE MÓVIL PERSONALIZADO ---------- */
+  .phone-wrap { display: flex; justify-content: center; align-items: center; }
+  .phone {
+    position: relative;
+    height: 88vh; max-height: 860px;
+    aspect-ratio: 378 / 850;          /* ratio real de los clips */
+    padding: 9px;
+    border-radius: 42px;
+    background: linear-gradient(155deg, #2a2655 0%, #14122e 45%, #0a0918 100%);
+    box-shadow:
+      0 36px 80px -22px rgba(0,0,0,0.8),
+      0 0 0 1.5px rgba(140,130,240,0.28),
+      0 0 70px -12px rgba(77,68,227,0.55),
+      inset 0 1px 1px rgba(255,255,255,0.10);
+    transition: transform .4s ease, box-shadow .4s ease;
+  }
+  .phone:hover { transform: translateY(-4px); box-shadow: 0 44px 90px -22px rgba(0,0,0,0.85), 0 0 0 1.5px rgba(140,130,240,0.4), 0 0 90px -10px rgba(77,68,227,0.7), inset 0 1px 1px rgba(255,255,255,0.12); }
+  /* botones laterales del móvil */
+  .phone::after {
+    content: ''; position: absolute; right: -3px; top: 150px;
+    width: 3px; height: 64px; border-radius: 3px;
+    background: linear-gradient(var(--primary-light), var(--indigo-deep));
+    opacity: .55;
+  }
+  .phone-screen {
+    position: relative; width: 100%; height: 100%;
+    border-radius: 34px; overflow: hidden; background: #000;
+  }
+  .phone-screen video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* etiqueta flotante de marca sobre la pantalla */
+  .live-tag {
+    position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+    z-index: 5; display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11px; font-weight: 700; letter-spacing: .5px;
+    padding: 6px 13px; border-radius: 999px;
+    background: rgba(10,9,24,0.62); backdrop-filter: blur(8px);
+    border: 1px solid var(--border); color: var(--text);
+    opacity: 0; transition: opacity .3s; pointer-events: none;
+  }
+  .phone:hover .live-tag { opacity: 0; }
+  .live-tag .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 0 rgba(239,68,68,.7); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(239,68,68,.6)} 70%{box-shadow:0 0 0 7px rgba(239,68,68,0)} 100%{box-shadow:0 0 0 0 rgba(239,68,68,0)} }
+
+  .player.is-playing .live-tag { opacity: 1; }
+
+  .missing {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 24px;
+    background: repeating-linear-gradient(45deg, #16142f, #16142f 14px, #1a1840 14px, #1a1840 28px);
+    color: var(--text-muted); z-index: 6;
+  }
+  .missing .big { font-size: 40px; }
+  .missing code { background: rgba(0,0,0,.4); padding: 3px 8px; border-radius: 6px; color: var(--primary-light); font-size: 13px; }
+
+  /* ---------- CIERRE ---------- */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 16px; margin-top: 38px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px 18px; }
+  .stat .n { font-size: clamp(28px,4vw,40px); font-weight: 800;
+    background: linear-gradient(120deg,#fff,var(--primary-light)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .stat .l { color: var(--text-muted); font-size: 13px; margin-top: 6px; }
+  .stack-row { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; }
+  .end-logo { width: 70px; margin: 0 auto 18px; opacity: .95; }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 860px) {
+    .clip-grid { grid-template-columns: 1fr; gap: 26px; }
+    .clip-copy { order: 2; }
+    .phone-wrap { order: 1; }
+    .phone { height: 56vh; }
+    .dots { display: none; }
+    section { padding: 56px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<nav class="dots" id="dots"></nav>
+
+<div class="deck" id="deck">
+
+  <!-- 0 · PORTADA -->
+  <section id="s0" data-label="Inicio">
+    <div class="wrap hero">
+      <img class="logo" src="assets/logo-icon.png" alt="LifeVault" />
+      <h1>LifeVault</h1>
+      <p class="tagline">Tu bóveda personal segura, con un asistente de IA que entiende tus documentos.</p>
+      <div class="meta">
+        <span class="chip">Trabajo de Fin de <strong>Máster</strong></span>
+        <span class="chip"><strong>Pablo Mérida</strong></span>
+        <span class="chip">App móvil · <strong>React Native</strong></span>
+      </div>
+      <p class="scroll-hint">↓ Desliza o usa las flechas ←/→ para navegar</p>
+    </div>
+  </section>
+
+  <!-- 1 · PROBLEMA -->
+  <section id="s1" data-label="El problema">
+    <div class="wrap" style="text-align:center;">
+      <span class="eyebrow"><span class="num">?</span> El problema</span>
+      <h2>¿Dónde está tu documentación importante?</h2>
+      <p class="lead" style="margin-inline:auto;">El DNI, el contrato del piso, la póliza del seguro, la última factura… Casi siempre la respuesta es <em>"en algún sitio"</em>: el correo, una carpeta del móvil, una foto perdida. Está dispersa y es imposible de consultar cuando de verdad la necesitas.</p>
+
+      <div class="prob-grid">
+        <div class="prob-card"><div class="ic">🗂️</div><h4>Dispersión</h4><p>Documentos repartidos entre email, galería, chats y cajones digitales.</p></div>
+        <div class="prob-card"><div class="ic">🔍</div><h4>No se pueden consultar</h4><p>Drive o Dropbox <b>almacenan</b> los archivos, pero no los <b>entienden</b>.</p></div>
+        <div class="prob-card"><div class="ic">🔒</div><h4>Sin seguridad real</h4><p>Las apps de notas no están pensadas para documentos sensibles.</p></div>
+      </div>
+
+      <p class="arrow-down">↓ LifeVault resuelve esto ↓</p>
+      <div class="solution" style="margin-inline:auto;">
+        Una <strong>bóveda personal segura</strong> donde guardas tus documentos importantes, y un <strong>asistente de IA que los lee por ti</strong> y responde en lenguaje natural. Además integra <strong>tareas y calendario</strong>, porque tu documentación y tu día a día van de la mano.
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · CLIP 1 -->
+  <section id="s2" data-label="Acceso seguro">
+    <div class="clip">
+      <div class="clip-grid">
+        <div class="clip-copy">
+          <span class="eyebrow"><span class="num">1</span> Demo · Acceso</span>
+          <h2>Entrada segura a la bóveda</h2>
+          <div class="tag-row">
+            <span class="tag tech">Supabase Auth</span>
+            <span class="tag tech">Google Sign-In</span>
+          </div>
+          <ul>
+            <li><b>Autenticación gestionada con Supabase</b>, con sesión persistente y segura.</li>
+            <li>Permite <b>inicio de sesión con Google</b> en un solo toque.</li>
+            <li>Es la puerta de entrada al corazón de la app: la bóveda.</li>
+          </ul>
+        </div>
+        <div class="phone-wrap">
+          <div class="player">
+            <div class="phone">
+              <div class="phone-screen">
+                <video controls controlsList="nodownload noremoteplayback" loop muted playsinline preload="auto">
+                  <source src="videos/clip1-login.mp4" type="video/mp4" />
+                </video>
+                <div class="missing"><div class="big">🎬</div><div>Falta el vídeo</div><code>videos/clip1-login.mp4</code></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · CLIP 2 -->
+  <section id="s3" data-label="La bóveda">
+    <div class="clip">
+      <div class="clip-grid">
+        <div class="clip-copy">
+          <span class="eyebrow"><span class="num">2</span> Demo · La bóveda</span>
+          <h2>Sube y guarda, cifrado de extremo a extremo</h2>
+          <div class="tag-row">
+            <span class="tag tech">Supabase Storage</span>
+            <span class="tag tech">AES-256</span>
+          </div>
+          <ul>
+            <li>La <b>bóveda</b> reúne todos tus documentos en un solo lugar.</li>
+            <li>Subo un <b>PDF nuevo</b> directamente desde el móvil a la nube.</li>
+            <li>El contenido se guarda <b>cifrado con AES-256</b>: aunque alguien accediera a la base de datos, no podría leerlo. La seguridad es parte del diseño, no un añadido.</li>
+          </ul>
+        </div>
+        <div class="phone-wrap">
+          <div class="player">
+            <div class="phone">
+              <div class="phone-screen">
+                <video controls controlsList="nodownload noremoteplayback" loop muted playsinline preload="auto">
+                  <source src="videos/clip2-boveda.mp4" type="video/mp4" />
+                </video>
+                <div class="missing"><div class="big">🎬</div><div>Falta el vídeo</div><code>videos/clip2-boveda.mp4</code></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · CLIP 3 -->
+  <section id="s4" data-label="Asistente IA ⭐">
+    <div class="clip">
+      <div class="clip-grid">
+        <div class="clip-copy">
+          <span class="eyebrow"><span class="num">3</span> Demo · Asistente IA ⭐</span>
+          <h2>Pregunta a tus documentos en lenguaje natural</h2>
+          <div class="tag-row">
+            <span class="tag tech">SSE Streaming</span>
+            <span class="tag tech">XHR</span>
+            <span class="tag tech">Edge Function</span>
+          </div>
+          <ul>
+            <li>En vez de abrir el PDF y buscar, simplemente <b>pregunto</b> (p. ej. «¿Cuándo vence mi seguro?»).</li>
+            <li>Y lo clave: la respuesta <b>sale de mi documento</b>, no de internet. La IA ha leído el PDF y extraído el dato exacto.</li>
+          </ul>
+        </div>
+        <div class="phone-wrap">
+          <div class="player">
+            <div class="phone">
+              <div class="phone-screen">
+                <video controls controlsList="nodownload noremoteplayback" loop muted playsinline preload="auto">
+                  <source src="videos/clip3-ia-pregunta.mp4" type="video/mp4" />
+                </video>
+                <div class="missing"><div class="big">🎬</div><div>Falta el vídeo</div><code>videos/clip3-ia-pregunta.mp4</code></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · CLIP 4 -->
+  <section id="s5" data-label="Memoria del chat">
+    <div class="clip">
+      <div class="clip-grid">
+        <div class="clip-copy">
+          <span class="eyebrow"><span class="num">4</span> Demo · Conversación</span>
+          <h2>Recuerda el hilo, como un chat real</h2>
+          <div class="tag-row">
+            <span class="tag tech">Historial persistente</span>
+            <span class="tag tech">Sesiones</span>
+          </div>
+          <ul>
+            <li>Puedo hacer <b>preguntas de seguimiento</b> y la app mantiene el contexto.</li>
+            <li>El <b>historial se guarda de forma persistente</b> en Supabase.</li>
+            <li>Abro una <b>conversación nueva</b> cuando cambio de tema.</li>
+          </ul>
+        </div>
+        <div class="phone-wrap">
+          <div class="player">
+            <div class="phone">
+              <div class="phone-screen">
+                <video controls controlsList="nodownload noremoteplayback" loop muted playsinline preload="auto">
+                  <source src="videos/clip4-ia-seguimiento.mp4" type="video/mp4" />
+                </video>
+                <div class="missing"><div class="big">🎬</div><div>Falta el vídeo</div><code>videos/clip4-ia-seguimiento.mp4</code></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · CLIP 5 -->
+  <section id="s6" data-label="Planner + sync ⭐">
+    <div class="clip">
+      <div class="clip-grid">
+        <div class="clip-copy">
+          <span class="eyebrow"><span class="num">5</span> Demo · Planner ⭐</span>
+          <h2>Tareas y calendario, sincronizados con Google</h2>
+          <div class="tag-row">
+            <span class="tag tech">Google Calendar</span>
+            <span class="tag tech">Google Tasks</span>
+            <span class="tag tech">Sync bidireccional</span>
+          </div>
+          <ul>
+            <li>La tercera pata: <b>tareas y eventos</b>. Creo una tarea rápida.</li>
+            <li>Se <b>sincroniza en los dos sentidos</b> con Google Calendar y Google Tasks: lo que creo aquí aparece en Google, y viceversa.</li>
+            <li>No es una simple importación — otro de los puntos técnicos más complejos del proyecto.</li>
+          </ul>
+        </div>
+        <div class="phone-wrap">
+          <div class="player">
+            <div class="phone">
+              <div class="phone-screen">
+                <video controls controlsList="nodownload noremoteplayback" loop muted playsinline preload="auto">
+                  <source src="videos/clip5-planner-sync.mp4" type="video/mp4" />
+                </video>
+                <div class="missing"><div class="big">🎬</div><div>Falta el vídeo</div><code>videos/clip5-planner-sync.mp4</code></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · CLIP 6 -->
+  <section id="s7" data-label="Acabado producto">
+    <div class="clip">
+      <div class="clip-grid">
+        <div class="clip-copy">
+          <span class="eyebrow"><span class="num">6</span> Demo · Acabado</span>
+          <h2>Modo oscuro, multi-idioma y detalles de producto</h2>
+          <div class="tag-row">
+            <span class="tag tech">Dark mode</span>
+            <span class="tag tech">i18n ES/EN</span>
+            <span class="tag tech">Ajustes</span>
+          </div>
+          <ul>
+            <li><b>Modo oscuro</b> completo, conmutable desde ajustes.</li>
+            <li><b>Multi-idioma</b>: español e inglés en caliente.</li>
+            <li>Ajustes funcionales: perfil, contraseña, notificaciones y suscripción.</li>
+          </ul>
+        </div>
+        <div class="phone-wrap">
+          <div class="player">
+            <div class="phone">
+              <div class="phone-screen">
+                <video controls controlsList="nodownload noremoteplayback" loop muted playsinline preload="auto">
+                  <source src="videos/clip6-polish.mp4" type="video/mp4" />
+                </video>
+                <div class="missing"><div class="big">🎬</div><div>Falta el vídeo</div><code>videos/clip6-polish.mp4</code></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · CIERRE -->
+  <section id="s8" data-label="Cierre">
+    <div class="wrap" style="text-align:center;">
+      <span class="eyebrow" style="justify-content:center;"><span class="num">✓</span> En resumen</span>
+      <h2>Un producto real, construido y testeado como producción</h2>
+      <p class="lead" style="margin-inline:auto;">Una bóveda documental segura, con un asistente de IA que entiende tus documentos y un gestor de tu día a día.</p>
+
+      <div class="stats">
+        <div class="stat"><div class="n">99</div><div class="l">tests automatizados</div></div>
+        <div class="stat"><div class="n">AES-256</div><div class="l">cifrado de contenido</div></div>
+        <div class="stat"><div class="n">2-vías</div><div class="l">sync con Google</div></div>
+        <div class="stat"><div class="n">EAS</div><div class="l">build Android real</div></div>
+      </div>
+
+      <div class="stack-row">
+        <span class="chip">Expo SDK 54</span>
+        <span class="chip">React Native</span>
+        <span class="chip">Supabase</span>
+        <span class="chip">Edge Functions</span>
+        <span class="chip">Zustand</span>
+        <span class="chip">NativeWind</span>
+        <span class="chip">CI · GitHub Actions</span>
+      </div>
+
+      <p class="lead" style="margin-inline:auto; margin-top:34px; color:var(--text);"></p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const deck = document.getElementById('deck');
+  const sections = Array.from(deck.querySelectorAll('section'));
+  const dotsNav = document.getElementById('dots');
+  const progress = document.getElementById('progress');
+
+  // construir dots
+  sections.forEach((s, i) => {
+    const a = document.createElement('a');
+    a.href = '#' + s.id;
+    a.dataset.idx = i;
+    a.innerHTML = '<span>' + (s.dataset.label || ('Sección ' + i)) + '</span>';
+    dotsNav.appendChild(a);
+  });
+  const dots = Array.from(dotsNav.children);
+
+  // reproducir el vídeo de la sección activa, pausar el resto
+  function activateVideo(idx) {
+    sections.forEach((s, i) => {
+      const v = s.querySelector('video');
+      const player = s.querySelector('.player');
+      if (!v) return;
+      if (i === idx) {
+        try { v.currentTime = 0; } catch (e) {}
+        const p = v.play();
+        if (p && p.catch) p.catch(() => { v.muted = true; v.play().catch(() => {}); });
+        if (player) player.classList.add('is-playing');
+      } else {
+        v.pause();
+        if (player) player.classList.remove('is-playing');
+      }
+    });
+  }
+
+  // ocultar placeholder cuando el clip carga; mostrarlo si falla
+  document.querySelectorAll('.player').forEach(p => {
+    const video = p.querySelector('video');
+    const missing = p.querySelector('.missing');
+    if (!video || !missing) return;
+    const hide = () => { missing.style.display = 'none'; };
+    const show = () => { missing.style.display = 'flex'; };
+    video.addEventListener('loadeddata', hide);
+    video.addEventListener('canplay', hide);
+    video.querySelector('source')?.addEventListener('error', show);
+    video.addEventListener('error', show);
+    if (video.readyState >= 2) hide();
+  });
+
+  // observer: activa dot, barra de progreso y autoplay
+  let activeIdx = 0;
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = sections.indexOf(e.target);
+        activeIdx = idx;
+        dots.forEach(d => d.classList.toggle('active', +d.dataset.idx === idx));
+        progress.style.width = (idx / (sections.length - 1) * 100) + '%';
+        activateVideo(idx);
+      }
+    });
+  }, { threshold: 0.6 });
+  sections.forEach(s => io.observe(s));
+
+  // navegación por teclado
+  function goTo(i) {
+    const n = Math.max(0, Math.min(sections.length - 1, i));
+    sections[n].scrollIntoView({ behavior: 'smooth' });
+  }
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) {
+      if (e.key === ' ' && e.target.tagName === 'VIDEO') return;
+      e.preventDefault(); goTo(getCurrent() + 1);
+    } else if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) {
+      e.preventDefault(); goTo(getCurrent() - 1);
+    } else if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+    else if (e.key === 'End') { e.preventDefault(); goTo(sections.length - 1); }
+    else if (e.key.toLowerCase() === 'm') {
+      // tecla M: alterna sonido del vídeo activo
+      const v = sections[activeIdx]?.querySelector('video');
+      if (v) v.muted = !v.muted;
+    }
+  });
+  function getCurrent() {
+    const mid = window.innerHeight / 2;
+    return sections.findIndex(s => {
+      const r = s.getBoundingClientRect();
+      return r.top <= mid && r.bottom >= mid;
+    });
+  }
+</script>
+</body>
+</html>
