@@ -1,3 +1,2 @@
-# Los clips de la demo no se versionan (binarios pesados, ~18 MB).
-# Se distribuyen aparte (USB / Drive) y se colocan en esta carpeta:
-videos/
+# Los clips de la demo (~18 MB) ahora se versionan para que la
+# presentación publicada en GitHub Pages muestre la demo completa.
